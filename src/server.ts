@@ -1,7 +1,8 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+import express, { Request, Response } from 'express';
+import { Pool } from 'pg';
 
-const express = require('express');
-const { Pool } = require('pg');
+dotenv.config();
 
 const app = express();
 
@@ -11,9 +12,11 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-app.get('/api/health', async (req, res) => {
+app.get('/api/health', async (_req: Request, res: Response) => {
   try {
-    const result = await pool.query('SELECT current_database()');
+    const result = await pool.query<{ current_database: string }>(
+      'SELECT current_database()'
+    );
 
     res.json({
       status: 'ok',
