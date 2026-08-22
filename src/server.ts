@@ -1,16 +1,11 @@
-import dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
-import { Pool } from 'pg';
 
-dotenv.config();
+import { env } from './config/env';
+import { pool } from './db/pool';
 
 const app = express();
 
 app.use(express.json());
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
 
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
@@ -32,8 +27,6 @@ app.get('/api/health', async (_req: Request, res: Response) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`Tareitas server running on http://localhost:${PORT}`);
+app.listen(env.port, () => {
+  console.log(`Tareitas server running on http://localhost:${env.port}`);
 });
