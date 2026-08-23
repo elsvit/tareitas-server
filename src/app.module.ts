@@ -9,6 +9,7 @@ import { InvitationsModule } from './modules/invitations/invitations.module';
 import { ChildrenModule } from './modules/children/children.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { RewardsModule } from './modules/rewards/rewards.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { RewardsModule } from './modules/rewards/rewards.module';
     ChildrenModule,
     TasksModule,
     RewardsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

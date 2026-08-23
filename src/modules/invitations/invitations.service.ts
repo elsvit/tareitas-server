@@ -7,13 +7,16 @@ import { randomBytes } from 'crypto';
 
 import { AppException } from '../../common/errors/app.exception';
 import { ErrorCode } from '../../common/errors/error-code';
+import { ENotificationType } from '../../types/notification';
 import { EFamilyRole, ERole } from '../../types/user';
+import { NotificationsService } from '../notifications/notifications.service';
 import { InvitationsRepository } from './invitations.repository';
 
 @Injectable()
 export class InvitationsService {
   constructor(
     private readonly invitationsRepository: InvitationsRepository,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createInvitation(
@@ -122,6 +125,20 @@ export class InvitationsService {
         expiresAt,
       });
 
+    if (invitedUser) {
+      await this.notificationsService.notifySafely({
+        userId: invitedUser.id,
+        familyId,
+        type: ENotificationType.invitation_received,
+        title: 'Family invitation',
+        body: 'You have been invited to join a family',
+        data: {
+          invitationId: invitation.id,
+          familyId,
+        },
+      });
+    }
+
     return {
       id: invitation.id,
       familyId: invitation.familyId,
@@ -209,14 +226,29 @@ export class InvitationsService {
       );
     }
 
-    return this.invitationsRepository.acceptInvitation(
-      invitation.id,
-      userId,
-      invitation.familyId,
-      invitation.role,
-      invitation.familyRole ?? undefined,
-      parentProfile,
-    );
+    const result =
+      await this.invitationsRepository.acceptInvitation(
+        invitation.id,
+        userId,
+        invitation.familyId,
+        invitation.role,
+        invitation.familyRole ?? undefined,
+        parentProfile,
+      );
+
+    await this.notificationsService.notifySafely({
+      userId: invitation.invitedByUserId,
+      familyId: invitation.familyId,
+      type: ENotificationType.invitation_accepted,
+      title: 'Invitation accepted',
+      body: `Your invitation to ${invitation.family.name} was accepted`,
+      data: {
+        invitationId: invitation.id,
+        familyId: invitation.familyId,
+      },
+    });
+
+    return result;
   }
 
   async rejectInvitation(
@@ -268,8 +300,23 @@ export class InvitationsService {
       );
     }
 
-    return this.invitationsRepository.rejectInvitation(
-      invitation.id,
-    );
+    const result =
+      await this.invitationsRepository.rejectInvitation(
+        invitation.id,
+      );
+
+    await this.notificationsService.notifySafely({
+      userId: invitation.invitedByUserId,
+      familyId: invitation.familyId,
+      type: ENotificationType.invitation_rejected,
+      title: 'Invitation rejected',
+      body: `Your invitation to ${invitation.family.name} was rejected`,
+      data: {
+        invitationId: invitation.id,
+        familyId: invitation.familyId,
+      },
+    });
+
+    return result;
   }
 }
