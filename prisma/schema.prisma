@@ -8,29 +8,26 @@ datasource db {
 }
 
 model User {
-  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  username     String? @unique(map: "users_username_unique") @db.VarChar(50)
-  email        String? @unique(map: "users_email_unique") @db.VarChar(255)
-  passwordHash String? @map("password_hash")
-
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username      String?        @unique(map: "users_username_unique") @db.VarChar(50)
+  email         String?        @unique(map: "users_email_unique") @db.VarChar(255)
+  passwordHash  String?        @map("password_hash")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
   childProfile  ChildProfile?
-  parentProfile ParentProfile?
   familyMembers FamilyMember[]
   invitations   Invitation[]
+  parentProfile ParentProfile?
+  refreshTokens RefreshToken[]
 
   @@map("users")
 }
 
 model Family {
-  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name String @db.VarChar(100)
-
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String         @db.VarChar(100)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
   members     FamilyMember[]
   invitations Invitation[]
 
@@ -38,18 +35,15 @@ model Family {
 }
 
 model FamilyMember {
-  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-
-  familyId   String  @map("family_id") @db.Uuid
-  userId     String  @map("user_id") @db.Uuid
-  role       String  @db.VarChar(20)
-  familyRole String? @map("family_role") @db.VarChar(30)
-
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade, map: "family_members_family_fk")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, map: "family_members_user_fk")
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  familyId   String   @map("family_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  role       String   @db.VarChar(20)
+  familyRole String?  @map("family_role") @db.VarChar(30)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  family     Family   @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "family_members_family_fk")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "family_members_user_fk")
 
   @@unique([familyId, userId], map: "family_members_unique")
   @@index([familyId])
@@ -58,13 +52,11 @@ model FamilyMember {
 }
 
 model ParentProfile {
-  userId String @id @map("user_id") @db.Uuid
-
+  userId String  @id @map("user_id") @db.Uuid
   name   String  @db.VarChar(100)
   color  String? @db.VarChar(50)
   avatar String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade, map: "parent_profiles_user_fk")
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "parent_profiles_user_fk")
 
   @@map("parent_profiles")
 }
@@ -76,32 +68,42 @@ model ChildProfile {
   color    String?   @db.VarChar(50)
   avatar   String?
   reward   Decimal   @default(0) @db.Decimal(10, 2)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade, map: "child_profiles_user_fk")
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "child_profiles_user_fk")
 
   @@map("child_profiles")
 }
 
 model Invitation {
-  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-
-  familyId        String @map("family_id") @db.Uuid
-  invitedEmail    String @map("invited_email") @db.VarChar(255)
-  invitedByUserId String @map("invited_by_user_id") @db.Uuid
-
-  role       String  @db.VarChar(20)
-  familyRole String? @map("family_role") @db.VarChar(30)
-
-  token      String    @unique
-  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
-  acceptedAt DateTime? @map("accepted_at") @db.Timestamptz(6)
-
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  family        Family @relation(fields: [familyId], references: [id], onDelete: Cascade, map: "invitations_family_fk")
-  invitedByUser User   @relation(fields: [invitedByUserId], references: [id], onDelete: Cascade, map: "invitations_invited_by_fk")
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  familyId        String    @map("family_id") @db.Uuid
+  invitedEmail    String    @map("invited_email") @db.VarChar(255)
+  invitedByUserId String    @map("invited_by_user_id") @db.Uuid
+  role            String    @db.VarChar(20)
+  familyRole      String?   @map("family_role") @db.VarChar(30)
+  token           String    @unique
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(6)
+  acceptedAt      DateTime? @map("accepted_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  family          Family    @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "invitations_family_fk")
+  invitedByUser   User      @relation(fields: [invitedByUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "invitations_invited_by_fk")
 
   @@index([familyId])
   @@index([invitedEmail])
   @@map("invitations")
+}
+
+model RefreshToken {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tokenHash String @unique
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }

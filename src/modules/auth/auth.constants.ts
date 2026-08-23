@@ -1,2 +1,3 @@
 export const JWT_ACCESS_EXPIRES_IN = '15m';
-export const JWT_REFRESH_EXPIRES_IN = '30d';
+export const REFRESH_TOKEN_EXPIRES_IN_DAYS = 30;
+export const REFRESH_TOKEN_BYTES = 32;
