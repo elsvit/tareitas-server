@@ -16,7 +16,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let errorCode = ErrorCode.INTERNAL_ERROR;
-    let details: unknown;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -25,26 +24,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
       if (
         typeof exceptionResponse === 'object' &&
-        exceptionResponse !== null
+        exceptionResponse !== null &&
+        'errorCode' in exceptionResponse
       ) {
-        if ('errorCode' in exceptionResponse) {
-          errorCode = exceptionResponse.errorCode as ErrorCode;
-        }
+        const value = exceptionResponse.errorCode;
 
-        if ('message' in exceptionResponse) {
-          const message = exceptionResponse.message;
-
-          if (Array.isArray(message)) {
-            errorCode = ErrorCode.VALIDATION_ERROR;
-            details = message;
-          }
+        if (typeof value === 'string') {
+          errorCode = value as ErrorCode;
         }
       }
     }
 
     response.status(status).json({
       errorCode,
-      ...(details !== undefined && { details }),
     });
   }
 }

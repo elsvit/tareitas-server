@@ -1,32 +1,31 @@
 import {
+  Body,
   Controller,
   Get,
-  NotFoundException,
   Param,
   Post,
-  Body,
+  UseGuards,
 } from '@nestjs/common';
+
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UsersService } from './users.service';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+  ) {}
 
   @Post()
   create(@Body() dto: CreateUserDto) {
     return this.usersService.create(dto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
-  async findById(@Param('id') id: string) {
-    const user = await this.usersService.findById(id);
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    return user;
+  findById(@Param('id') id: string) {
+    return this.usersService.findById(id);
   }
 }
