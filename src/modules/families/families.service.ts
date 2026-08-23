@@ -1,9 +1,10 @@
 import {
+  HttpStatus,
   Injectable,
-  NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 
+import { AppException } from '../../common/errors/app.exception';
+import { ErrorCode } from '../../common/errors/error-code';
 import { FamiliesRepository } from './families.repository';
 
 @Injectable()
@@ -16,9 +17,7 @@ export class FamiliesService {
    * Get all families the current user belongs to.
    */
   getMyFamilies(userId: string) {
-    return this.familiesRepository.findMyFamilies(
-      userId,
-    );
+    return this.familiesRepository.findMyFamilies(userId);
   }
 
   /**
@@ -38,8 +37,10 @@ export class FamiliesService {
       );
 
     if (!family) {
-      throw new NotFoundException(
+      throw new AppException(
+        ErrorCode.FAMILY_NOT_FOUND,
         'Family not found',
+        HttpStatus.NOT_FOUND,
       );
     }
 
@@ -51,7 +52,7 @@ export class FamiliesService {
    *
    * The current user automatically becomes:
    * - role: parent
-   * - familyRole: owner
+   * - isOwner: true
    */
   createFamily(
     userId: string,
@@ -63,6 +64,11 @@ export class FamiliesService {
     );
   }
 
+  /**
+   * Update a family.
+   *
+   * Only the family owner can update it.
+   */
   async updateFamily(
     userId: string,
     familyId: string,
@@ -73,23 +79,27 @@ export class FamiliesService {
         userId,
         familyId,
       );
-  
+
     if (!family) {
-      throw new NotFoundException(
+      throw new AppException(
+        ErrorCode.FAMILY_NOT_FOUND,
         'Family not found',
+        HttpStatus.NOT_FOUND,
       );
     }
-  
+
     const membership = family.members.find(
       (member) => member.userId === userId,
     );
-  
-    if (membership?.familyRole !== 'owner') {
-      throw new ForbiddenException(
+
+    if (!membership?.isOwner) {
+      throw new AppException(
+        ErrorCode.FORBIDDEN,
         'Only the family owner can update the family',
+        HttpStatus.FORBIDDEN,
       );
     }
-  
+
     return this.familiesRepository.updateFamily(
       familyId,
       name,

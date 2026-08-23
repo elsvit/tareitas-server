@@ -4,12 +4,17 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 
 import { ErrorCode } from './error-code';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(
+    HttpExceptionFilter.name,
+  );
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
@@ -33,6 +38,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
           errorCode = value as ErrorCode;
         }
       }
+    }
+
+    // Log the real exception on the server.
+    // Do not expose internal details to the mobile app.
+    if (status >= 500) {
+      this.logger.error(exception);
     }
 
     response.status(status).json({

@@ -8,5 +8,5 @@ export class CreateFamilyDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  name: string;
-}
+  name!: string;
+} 

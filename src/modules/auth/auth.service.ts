@@ -1,11 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import {
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
+
 import * as argon2 from 'argon2';
 import * as crypto from 'node:crypto';
 
 import { JwtService } from '@nestjs/jwt';
 
 import { PrismaService } from '../../db/prisma.service';
-
 import { AppException } from '../../common/errors/app.exception';
 import { ErrorCode } from '../../common/errors/error-code';
 
@@ -33,7 +36,8 @@ export class AuthService {
     if (!user || !user.passwordHash) {
       throw new AppException(
         ErrorCode.INVALID_CREDENTIALS,
-        401,
+        'Invalid credentials',
+        HttpStatus.UNAUTHORIZED,
       );
     }
 
@@ -45,7 +49,8 @@ export class AuthService {
     if (!validPin) {
       throw new AppException(
         ErrorCode.INVALID_CREDENTIALS,
-        401,
+        'Invalid credentials',
+        HttpStatus.UNAUTHORIZED,
       );
     }
 
@@ -94,7 +99,8 @@ export class AuthService {
     ) {
       throw new AppException(
         ErrorCode.UNAUTHORIZED,
-        401,
+        'Invalid or expired refresh token',
+        HttpStatus.UNAUTHORIZED,
       );
     }
 

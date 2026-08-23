@@ -1,17 +1,18 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-
 import { ErrorCode } from './error-code';
 
 export class AppException extends HttpException {
   constructor(
     errorCode: ErrorCode,
-    statusCode: HttpStatus,
+    message: string,
+    status: HttpStatus,
   ) {
     super(
       {
         errorCode,
+        message,
       },
-      statusCode,
+      status,
     );
   }
 }
