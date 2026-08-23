@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MaxLength, Matches, MinLength } from 'class-validator';
 
 export class CreateUserDto {
   @IsOptional()
@@ -12,6 +12,10 @@ export class CreateUserDto {
   email?: string;
 
   @IsString()
-  @MinLength(8)
-  password!: string;
+  // @MinLength(8)
+  @Matches(/^\d{4}$/, {
+    message: 'pin must be exactly 4 digits',
+  })
+  pin!: string;
+  // password!: string;
 }
