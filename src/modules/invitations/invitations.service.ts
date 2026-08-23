@@ -7,6 +7,7 @@ import { randomBytes } from 'crypto';
 
 import { AppException } from '../../common/errors/app.exception';
 import { ErrorCode } from '../../common/errors/error-code';
+import { EFamilyRole, ERole } from '../../types/user';
 import { InvitationsRepository } from './invitations.repository';
 
 @Injectable()
@@ -38,28 +39,6 @@ export class InvitationsService {
         ErrorCode.VALIDATION_ERROR,
         'Provide either email or username, not both',
         HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const currentMember =
-      await this.invitationsRepository.findFamilyMember(
-        familyId,
-        currentUserId,
-      );
-
-    if (!currentMember) {
-      throw new AppException(
-        ErrorCode.FAMILY_MEMBER_NOT_FOUND,
-        'You are not a member of this family',
-        HttpStatus.FORBIDDEN,
-      );
-    }
-
-    if (currentMember.role !== 'parent') {
-      throw new AppException(
-        ErrorCode.INVITATION_NOT_ALLOWED,
-        'Only parents can invite family members',
-        HttpStatus.FORBIDDEN,
       );
     }
 
@@ -137,8 +116,8 @@ export class InvitationsService {
         invitedEmail: email,
         invitedUsername: username,
         invitedByUserId: currentUserId,
-        role: 'parent',
-        familyRole: 'other',
+        role: ERole.parent,
+        familyRole: EFamilyRole.other,
         token,
         expiresAt,
       });
@@ -165,6 +144,11 @@ export class InvitationsService {
   async acceptInvitation(
     userId: string,
     invitationId: string,
+    parentProfile?: {
+      name?: string;
+      color?: string;
+      avatar?: string;
+    },
   ) {
     const invitation =
       await this.invitationsRepository.findById(
@@ -231,6 +215,7 @@ export class InvitationsService {
       invitation.familyId,
       invitation.role,
       invitation.familyRole ?? undefined,
+      parentProfile,
     );
   }
 

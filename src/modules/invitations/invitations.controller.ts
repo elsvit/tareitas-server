@@ -8,10 +8,14 @@ import {
 } from '@nestjs/common';
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequireRole } from '../../common/decorators/require-role.decorator';
+import { FamilyMemberGuard } from '../../common/guards/family-member.guard';
+import { ERole } from '../../types/user';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtPayload } from '../auth/types/jwt-payload';
 
 import { CreateInvitationDto } from './dto/create-invitation.dto';
+import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { InvitationsService } from './invitations.service';
 
 @Controller()
@@ -25,6 +29,8 @@ export class InvitationsController {
    * POST /families/:familyId/invitations
    */
   @Post('families/:familyId/invitations')
+  @UseGuards(FamilyMemberGuard)
+  @RequireRole(ERole.parent)
   createInvitation(
     @CurrentUser() user: JwtPayload,
     @Param('familyId') familyId: string,
@@ -57,10 +63,12 @@ export class InvitationsController {
     @CurrentUser() user: JwtPayload,
     @Param('invitationId')
     invitationId: string,
+    @Body() dto: AcceptInvitationDto,
   ) {
     return this.invitationsService.acceptInvitation(
       user.sub,
       invitationId,
+      dto.parentProfile,
     );
   }
 

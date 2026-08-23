@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../db/prisma.service';
+import { ERole } from '../../types/user';
+import { ParentProfileInputDto } from '../parent-profiles/dto/parent-profile-input.dto';
+import { ParentProfilesService } from '../parent-profiles/parent-profiles.service';
 
 @Injectable()
 export class InvitationsRepository {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly parentProfilesService: ParentProfilesService,
   ) {}
 
   findUserByEmail(email: string) {
@@ -137,6 +141,7 @@ export class InvitationsRepository {
     familyId: string,
     role: string,
     familyRole?: string,
+    parentProfile?: ParentProfileInputDto,
   ) {
     return this.prisma.$transaction(
       async (tx) => {
@@ -149,6 +154,14 @@ export class InvitationsRepository {
               familyRole,
             },
           });
+
+        if (role === ERole.parent) {
+          await this.parentProfilesService.ensureParentProfile(
+            userId,
+            parentProfile,
+            tx,
+          );
+        }
 
         const invitation =
           await tx.invitation.update({

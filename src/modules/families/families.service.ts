@@ -5,6 +5,7 @@ import {
 
 import { AppException } from '../../common/errors/app.exception';
 import { ErrorCode } from '../../common/errors/error-code';
+import { ParentProfileInputDto } from '../parent-profiles/dto/parent-profile-input.dto';
 import { FamiliesRepository } from './families.repository';
 
 @Injectable()
@@ -21,18 +22,13 @@ export class FamiliesService {
   }
 
   /**
-   * Get one family.
+   * Get one family by id.
    *
-   * The repository only returns the family if
-   * the current user is a member of it.
+   * Caller must verify family membership first.
    */
-  async getFamily(
-    userId: string,
-    familyId: string,
-  ) {
+  async getFamily(familyId: string) {
     const family =
-      await this.familiesRepository.findFamilyForUser(
-        userId,
+      await this.familiesRepository.findFamilyById(
         familyId,
       );
 
@@ -57,49 +53,24 @@ export class FamiliesService {
   createFamily(
     userId: string,
     name: string,
+    parentProfile?: ParentProfileInputDto,
   ) {
     return this.familiesRepository.createFamily(
       userId,
       name,
+      parentProfile,
     );
   }
 
   /**
    * Update a family.
    *
-   * Only the family owner can update it.
+   * Caller must verify family ownership first.
    */
-  async updateFamily(
-    userId: string,
+  updateFamily(
     familyId: string,
     name: string,
   ) {
-    const family =
-      await this.familiesRepository.findFamilyForUser(
-        userId,
-        familyId,
-      );
-
-    if (!family) {
-      throw new AppException(
-        ErrorCode.FAMILY_NOT_FOUND,
-        'Family not found',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    const membership = family.members.find(
-      (member) => member.userId === userId,
-    );
-
-    if (!membership?.isOwner) {
-      throw new AppException(
-        ErrorCode.FORBIDDEN,
-        'Only the family owner can update the family',
-        HttpStatus.FORBIDDEN,
-      );
-    }
-
     return this.familiesRepository.updateFamily(
       familyId,
       name,
