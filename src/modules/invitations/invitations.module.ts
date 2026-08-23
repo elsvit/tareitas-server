@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { CommonModule } from '../../common/common.module';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { ParentProfilesModule } from '../parent-profiles/parent-profiles.module';
 
 import { InvitationsController } from './invitations.controller';
@@ -13,6 +14,7 @@ import { InvitationsService } from './invitations.service';
     AuthModule,
     CommonModule,
     ParentProfilesModule,
+    NotificationsModule,
   ],
   controllers: [
     InvitationsController,

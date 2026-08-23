@@ -5,8 +5,10 @@ import {
 
 import { AppException } from '../../common/errors/app.exception';
 import { ErrorCode } from '../../common/errors/error-code';
+import { ENotificationType } from '../../types/notification';
 import { ETaskStatus } from '../../types/task';
 import { ERole } from '../../types/user';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import {
   ListTasksQueryDto,
@@ -19,6 +21,7 @@ import { TasksRepository } from './tasks.repository';
 export class TasksService {
   constructor(
     private readonly tasksRepository: TasksRepository,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listTasks(
@@ -78,6 +81,18 @@ export class TasksService {
           ? new Date(dto.dueDate)
           : undefined,
       });
+
+    await this.notificationsService.notifySafely({
+      userId: task.assignedToUserId,
+      familyId,
+      type: ENotificationType.task_assigned,
+      title: 'New task assigned',
+      body: task.title,
+      data: {
+        taskId: task.id,
+        familyId,
+      },
+    });
 
     return toTask(task);
   }
@@ -203,6 +218,21 @@ export class TasksService {
         task.id,
       );
 
+    await this.notificationsService.notifyParentsSafely(
+      familyId,
+      {
+        type: ENotificationType.task_completed,
+        title: 'Task completed',
+        body: task.title,
+        data: {
+          taskId: task.id,
+          familyId,
+          childUserId: userId,
+        },
+      },
+      userId,
+    );
+
     return toTask(updated);
   }
 
@@ -233,6 +263,19 @@ export class TasksService {
         task.id,
       );
 
+    await this.notificationsService.notifySafely({
+      userId: task.assignedToUserId,
+      familyId,
+      type: ENotificationType.task_approved,
+      title: 'Task approved',
+      body: `"${task.title}" was approved (+${task.points.toNumber()} points)`,
+      data: {
+        taskId: task.id,
+        familyId,
+        points: task.points.toNumber(),
+      },
+    });
+
     return toTask(updated);
   }
 
@@ -257,6 +300,18 @@ export class TasksService {
       await this.tasksRepository.rejectTask(
         task.id,
       );
+
+    await this.notificationsService.notifySafely({
+      userId: task.assignedToUserId,
+      familyId,
+      type: ENotificationType.task_rejected,
+      title: 'Task rejected',
+      body: `"${task.title}" needs to be done again`,
+      data: {
+        taskId: task.id,
+        familyId,
+      },
+    });
 
     return toTask(updated);
   }

@@ -5,8 +5,10 @@ import {
 
 import { AppException } from '../../common/errors/app.exception';
 import { ErrorCode } from '../../common/errors/error-code';
+import { ENotificationType } from '../../types/notification';
 import { ERewardRedemptionStatus } from '../../types/reward';
 import { ERole } from '../../types/user';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   CreateRewardDto,
   ListRedemptionsQueryDto,
@@ -22,6 +24,7 @@ import { RewardsRepository } from './rewards.repository';
 export class RewardsService {
   constructor(
     private readonly rewardsRepository: RewardsRepository,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   listRewards(
@@ -204,6 +207,22 @@ export class RewardsService {
         },
       );
 
+    await this.notificationsService.notifyParentsSafely(
+      familyId,
+      {
+        type: ENotificationType.reward_redemption_requested,
+        title: 'Reward redemption requested',
+        body: `"${reward.title}" (${reward.cost.toNumber()} points)`,
+        data: {
+          redemptionId: redemption.id,
+          rewardId: reward.id,
+          familyId,
+          childUserId,
+        },
+      },
+      childUserId,
+    );
+
     return toRewardRedemption(redemption);
   }
 
@@ -241,6 +260,25 @@ export class RewardsService {
           HttpStatus.NOT_FOUND,
         );
       }
+
+      const reward =
+        await this.getRewardEntity(
+          familyId,
+          redemption.rewardId,
+        );
+
+      await this.notificationsService.notifySafely({
+        userId: redemption.childUserId,
+        familyId,
+        type: ENotificationType.reward_redemption_approved,
+        title: 'Reward approved',
+        body: `"${reward.title}" was approved`,
+        data: {
+          redemptionId: redemption.id,
+          rewardId: reward.id,
+          familyId,
+        },
+      });
 
       return toRewardRedemption(updated);
     } catch (error) {
@@ -285,6 +323,25 @@ export class RewardsService {
       await this.rewardsRepository.rejectRedemption(
         redemption.id,
       );
+
+    const reward =
+      await this.getRewardEntity(
+        familyId,
+        redemption.rewardId,
+      );
+
+    await this.notificationsService.notifySafely({
+      userId: redemption.childUserId,
+      familyId,
+      type: ENotificationType.reward_redemption_rejected,
+      title: 'Reward rejected',
+      body: `"${reward.title}" redemption was rejected`,
+      data: {
+        redemptionId: redemption.id,
+        rewardId: reward.id,
+        familyId,
+      },
+    });
 
     return toRewardRedemption(updated);
   }
