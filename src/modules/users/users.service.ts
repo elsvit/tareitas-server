@@ -1,7 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
+
 import * as argon2 from 'argon2';
 
+import { Prisma } from '../../generated/prisma/client';
+
 import { PrismaService } from '../../db/prisma.service';
+
 import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
@@ -9,17 +17,36 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateUserDto) {
-    const passwordHash = await argon2.hash(dto.password);
+    if (!dto.username && !dto.email) {
+      throw new BadRequestException(
+        'Username or email is required',
+      );
+    }
 
-    const user = await this.prisma.user.create({
-      data: {
-        username: dto.username,
-        email: dto.email,
-        passwordHash,
-      },
-    });
+    const passwordHash = await argon2.hash(dto.pin);
 
-    return this.toPublicUser(user);
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          username: dto.username,
+          email: dto.email,
+          passwordHash,
+        },
+      });
+
+      return this.toPublicUser(user);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Username or email already exists',
+        );
+      }
+
+      throw error;
+    }
   }
 
   async findById(id: string) {
