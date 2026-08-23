@@ -8,6 +8,7 @@ import { FamiliesModule } from './modules/families/families.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
 import { ChildrenModule } from './modules/children/children.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { RewardsModule } from './modules/rewards/rewards.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
     InvitationsModule,
     ChildrenModule,
     TasksModule,
+    RewardsModule,
   ],
 })
 export class AppModule {}

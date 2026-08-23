@@ -27,6 +27,9 @@ model User {
   tasksAssigned Task[] @relation("TaskAssignedTo")
   tasksCreated  Task[] @relation("TaskCreatedBy")
 
+  rewardsCreated      Reward[]           @relation("RewardCreatedBy")
+  rewardRedemptions   RewardRedemption[] @relation("RewardRedemptionChild")
+
   @@map("users")
 }
 
@@ -39,6 +42,8 @@ model Family {
   members     FamilyMember[]
   invitations Invitation[]
   tasks       Task[]
+  rewards            Reward[]
+  rewardRedemptions  RewardRedemption[]
 
   @@map("families")
 }
@@ -163,4 +168,48 @@ model Task {
   @@index([assignedToUserId])
   @@index([status])
   @@map("tasks")
+}
+
+model Reward {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  familyId    String  @map("family_id") @db.Uuid
+  title       String  @db.VarChar(200)
+  description String?
+  cost        Decimal @db.Decimal(10, 2)
+  isActive    Boolean @default(true) @map("is_active")
+
+  createdByUserId String @map("created_by_user_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  family      Family             @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rewards_family_fk")
+  createdBy   User               @relation("RewardCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rewards_created_by_fk")
+  redemptions RewardRedemption[]
+
+  @@index([familyId])
+  @@map("rewards")
+}
+
+model RewardRedemption {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  familyId String @map("family_id") @db.Uuid
+  rewardId String @map("reward_id") @db.Uuid
+
+  childUserId String @map("child_user_id") @db.Uuid
+  cost        Decimal @db.Decimal(10, 2)
+  status      String  @default("pending") @db.VarChar(20)
+
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  approvedAt DateTime? @map("approved_at") @db.Timestamptz(6)
+  rejectedAt DateTime? @map("rejected_at") @db.Timestamptz(6)
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "reward_redemptions_family_fk")
+  reward Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "reward_redemptions_reward_fk")
+  child  User   @relation("RewardRedemptionChild", fields: [childUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "reward_redemptions_child_fk")
+
+  @@index([familyId])
+  @@index([childUserId])
+  @@index([status])
+  @@map("reward_redemptions")
 }
