@@ -1,8 +1,14 @@
-import {  HttpStatus,Injectable } from '@nestjs/common';
+import {
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
+
 import * as argon2 from 'argon2';
 
 import { Prisma } from '../../generated/prisma/client';
+
 import { PrismaService } from '../../db/prisma.service';
+
 import { AppException } from '../../common/errors/app.exception';
 import { ErrorCode } from '../../common/errors/error-code';
 
@@ -10,12 +16,15 @@ import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
 
   async create(dto: CreateUserDto) {
     if (!dto.username && !dto.email) {
       throw new AppException(
         ErrorCode.VALIDATION_ERROR,
+        'Username or email is required',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -39,6 +48,7 @@ export class UsersService {
       ) {
         throw new AppException(
           ErrorCode.USER_ALREADY_EXISTS,
+          'User already exists',
           HttpStatus.CONFLICT,
         );
       }
@@ -55,6 +65,7 @@ export class UsersService {
     if (!user) {
       throw new AppException(
         ErrorCode.USER_NOT_FOUND,
+        'User not found',
         HttpStatus.NOT_FOUND,
       );
     }

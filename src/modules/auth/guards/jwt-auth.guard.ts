@@ -31,6 +31,7 @@ export class JwtAuthGuard implements CanActivate {
     if (!authHeader?.startsWith('Bearer ')) {
       throw new AppException(
         ErrorCode.UNAUTHORIZED,
+        'Authorization token is required',
         HttpStatus.UNAUTHORIZED,
       );
     }
@@ -49,6 +50,7 @@ export class JwtAuthGuard implements CanActivate {
     } catch {
       throw new AppException(
         ErrorCode.UNAUTHORIZED,
+        'Invalid or expired access token',
         HttpStatus.UNAUTHORIZED,
       );
     }

@@ -60,33 +60,31 @@ export class FamiliesRepository {
   }
 
   /**
-   * Creates a family and makes the current user
-   * its owner.
+   * Creates a family and makes the current user its owner.
    */
-  createFamily(
+  async createFamily(
     userId: string,
     name: string,
   ) {
-    return this.prisma.$transaction(
-      async (tx) => {
-        const family = await tx.family.create({
-          data: {
-            name,
-          },
-        });
+    return this.prisma.$transaction(async (tx) => {
+      const family = await tx.family.create({
+        data: {
+          name,
+        },
+      });
 
-        await tx.familyMember.create({
-          data: {
-            familyId: family.id,
-            userId,
-            role: 'parent',
-            familyRole: 'owner',
-          },
-        });
+      await tx.familyMember.create({
+        data: {
+          familyId: family.id,
+          userId,
+          role: 'parent',
+          familyRole: null,
+          isOwner: true,
+        },
+      });
 
-        return family;
-      },
-    );
+      return family;
+    });
   }
 
   /**
@@ -97,8 +95,12 @@ export class FamiliesRepository {
     name: string,
   ) {
     return this.prisma.family.update({
-      where: { id: familyId },
-      data: { name },
+      where: {
+        id: familyId,
+      },
+      data: {
+        name,
+      },
     });
   }
 }
