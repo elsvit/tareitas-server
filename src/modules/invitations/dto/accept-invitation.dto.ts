@@ -1,22 +1,14 @@
 import { Type } from 'class-transformer';
 import {
-  IsNotEmpty,
   IsOptional,
-  IsString,
-  MaxLength,
   ValidateNested,
 } from 'class-validator';
 
 import { ParentProfileInputDto } from '../../parent-profiles/dto/parent-profile-input.dto';
 
-export class CreateFamilyDto {
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
-  name!: string;
-
+export class AcceptInvitationDto {
   @IsOptional()
   @ValidateNested()
   @Type(() => ParentProfileInputDto)
   parentProfile?: ParentProfileInputDto;
-} 
+}

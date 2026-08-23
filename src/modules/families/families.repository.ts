@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../db/prisma.service';
+import { ERole } from '../../types/user';
+import { ParentProfileInputDto } from '../parent-profiles/dto/parent-profile-input.dto';
+import { ParentProfilesService } from '../parent-profiles/parent-profiles.service';
 
 @Injectable()
 export class FamiliesRepository {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly parentProfilesService: ParentProfilesService,
   ) {}
 
   /**
@@ -21,6 +25,32 @@ export class FamiliesRepository {
       },
       orderBy: {
         createdAt: 'asc',
+      },
+    });
+  }
+
+  /**
+   * Returns a family by id with members and profiles.
+   */
+  findFamilyById(familyId: string) {
+    return this.prisma.family.findUnique({
+      where: {
+        id: familyId,
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              include: {
+                parentProfile: true,
+                childProfile: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
       },
     });
   }
@@ -65,6 +95,7 @@ export class FamiliesRepository {
   async createFamily(
     userId: string,
     name: string,
+    parentProfile?: ParentProfileInputDto,
   ) {
     return this.prisma.$transaction(async (tx) => {
       const family = await tx.family.create({
@@ -77,11 +108,17 @@ export class FamiliesRepository {
         data: {
           familyId: family.id,
           userId,
-          role: 'parent',
+          role: ERole.parent,
           familyRole: null,
           isOwner: true,
         },
       });
+
+      await this.parentProfilesService.ensureParentProfile(
+        userId,
+        parentProfile,
+        tx,
+      );
 
       return family;
     });

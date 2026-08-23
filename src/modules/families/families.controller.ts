@@ -3,23 +3,27 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequireOwner } from '../../common/decorators/require-owner.decorator';
+import { FamilyMemberGuard } from '../../common/guards/family-member.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtPayload } from '../auth/types/jwt-payload';
 
 import { CreateFamilyDto } from './dto/create-family.dto';
 import { FamiliesService } from './families.service';
+import { UpdateFamilyDto } from './dto/update-family.dto';
 
 @Controller('families')
 @UseGuards(JwtAuthGuard)
 export class FamiliesController {
   constructor(
     private readonly familiesService: FamiliesService,
-  ) {}
+  ) { }
 
   /**
    * GET /families/me
@@ -42,12 +46,11 @@ export class FamiliesController {
    * is a member of it.
    */
   @Get(':familyId')
+  @UseGuards(FamilyMemberGuard)
   getFamily(
-    @CurrentUser() user: JwtPayload,
     @Param('familyId') familyId: string,
   ) {
     return this.familiesService.getFamily(
-      user.sub,
       familyId,
     );
   }
@@ -65,6 +68,20 @@ export class FamiliesController {
   ) {
     return this.familiesService.createFamily(
       user.sub,
+      dto.name,
+      dto.parentProfile,
+    );
+  }
+
+  @Patch(':familyId')
+  @UseGuards(FamilyMemberGuard)
+  @RequireOwner()
+  updateFamily(
+    @Param('familyId') familyId: string,
+    @Body() dto: UpdateFamilyDto,
+  ) {
+    return this.familiesService.updateFamily(
+      familyId,
       dto.name,
     );
   }
