@@ -1,14 +1,10 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-} from '@nestjs/common';
-
+import {  HttpStatus,Injectable } from '@nestjs/common';
 import * as argon2 from 'argon2';
 
 import { Prisma } from '../../generated/prisma/client';
-
 import { PrismaService } from '../../db/prisma.service';
+import { AppException } from '../../common/errors/app.exception';
+import { ErrorCode } from '../../common/errors/error-code';
 
 import { CreateUserDto } from './dto/create-user.dto';
 
@@ -18,8 +14,9 @@ export class UsersService {
 
   async create(dto: CreateUserDto) {
     if (!dto.username && !dto.email) {
-      throw new BadRequestException(
-        'Username or email is required',
+      throw new AppException(
+        ErrorCode.VALIDATION_ERROR,
+        HttpStatus.BAD_REQUEST,
       );
     }
 
@@ -40,8 +37,9 @@ export class UsersService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new ConflictException(
-          'Username or email already exists',
+        throw new AppException(
+          ErrorCode.USER_ALREADY_EXISTS,
+          HttpStatus.CONFLICT,
         );
       }
 
@@ -55,7 +53,10 @@ export class UsersService {
     });
 
     if (!user) {
-      return null;
+      throw new AppException(
+        ErrorCode.USER_NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     return this.toPublicUser(user);
