@@ -7,12 +7,18 @@ import {
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { SignupFamilyDto } from './dto/signup-family.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
   ) { }
+
+  @Post('signup')
+  signup(@Body() dto: SignupFamilyDto) {
+    return this.authService.signupFamily(dto);
+  }
 
   @Post('login')
   login(@Body() dto: LoginDto) {

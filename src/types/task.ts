@@ -5,17 +5,64 @@ export enum ETaskStatus {
   rejected = 'rejected',
 }
 
+export enum ETaskRepeatType {
+  none = 'none',
+  day = 'day',
+  week = 'week',
+  month = 'month',
+}
+
+export interface ISubtask {
+  value: string;
+  label: string;
+}
+
+export interface ITaskAssignmentChange {
+  time?: string;
+  name?: string;
+  description?: string;
+  reward?: number;
+  picture?: string;
+  newTaskBonus?: number;
+  newTaskDuration?: number;
+}
+
+export interface ITaskAssignmentRepeat {
+  type: ETaskRepeatType;
+  weekDays?: number[];
+  count?: number;
+}
+
+export interface ITaskAssignment {
+  id: string;
+  familyId: string;
+  childId: string;
+  title: string;
+  description?: string;
+  reward?: number;
+  picture?: string;
+  color?: string;
+  startDate: string;
+  endDate?: string;
+  time: string;
+  isHabit?: boolean;
+  repeat?: ITaskAssignmentRepeat;
+  newTaskBonus?: number;
+  newTaskDuration?: number;
+  subtasks?: ISubtask[];
+  changes?: Record<string, ITaskAssignmentChange>;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ITask {
   id: string;
   familyId: string;
-  title: string;
-  description?: string;
-  assignedToUserId: string;
-  createdByUserId: string;
-  points: number;
+  assignmentId: string;
+  date: string;
   status: ETaskStatus;
-  dueDate?: string;
-  completedAt?: string;
+  completedSubtasks?: string[];
   createdAt: string;
   updatedAt: string;
 }

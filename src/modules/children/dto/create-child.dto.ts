@@ -11,23 +11,25 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class CreateChildDto {
+import { RequestLangDto } from '../../../common/dto/request-lang.dto';
+
+export class CreateChildDto extends RequestLangDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
   name!: string;
 
-  @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MinLength(3)
   @MaxLength(50)
-  username?: string;
+  username!: string;
 
-  @IsOptional()
+  @IsString()
   @Matches(/^\d{4}$/, {
     message: 'pin must be exactly 4 digits',
   })
-  pin?: string;
+  pin!: string;
 
   @IsOptional()
   @IsString()

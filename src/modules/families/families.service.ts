@@ -6,6 +6,7 @@ import {
 import { AppException } from '../../common/errors/app.exception';
 import { ErrorCode } from '../../common/errors/error-code';
 import { ParentProfileInputDto } from '../parent-profiles/dto/parent-profile-input.dto';
+import { toFamilyResponse } from './family.mapper';
 import { FamiliesRepository } from './families.repository';
 
 @Injectable()
@@ -40,7 +41,7 @@ export class FamiliesService {
       );
     }
 
-    return family;
+    return toFamilyResponse(family);
   }
 
   /**

@@ -34,8 +34,8 @@ export class FamilyMemberGuard implements CanActivate {
 
     if (!familyId) {
       throw new AppException(
-        ErrorCode.VALIDATION_ERROR,
-        'Family ID is required',
+        ErrorCode.VALIDATION_FAMILY_ID_REQUIRED,
+        '',
         HttpStatus.BAD_REQUEST,
       );
     }

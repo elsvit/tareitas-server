@@ -3,24 +3,33 @@ import {
   Injectable,
 } from '@nestjs/common';
 
+import { Prisma } from '../../generated/prisma/client';
+
 import { AppException } from '../../common/errors/app.exception';
 import { ErrorCode } from '../../common/errors/error-code';
 import { ENotificationType } from '../../types/notification';
 import { ETaskStatus } from '../../types/task';
 import { ERole } from '../../types/user';
+import { getEffectiveReward } from '../task-assignments/task-assignment.mapper';
+import { TaskAssignmentsService } from '../task-assignments/task-assignments.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CreateTaskDto } from './dto/create-task.dto';
 import {
+  CreateTaskDto,
   ListTasksQueryDto,
+  SyncTasksDto,
   UpdateTaskDto,
-} from './dto/update-task.dto';
-import { toTask } from './task.mapper';
+} from './dto/task.dto';
+import {
+  formatTaskDate,
+  toTask,
+} from './task.mapper';
 import { TasksRepository } from './tasks.repository';
 
 @Injectable()
 export class TasksService {
   constructor(
     private readonly tasksRepository: TasksRepository,
+    private readonly taskAssignmentsService: TaskAssignmentsService,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -31,7 +40,17 @@ export class TasksService {
     const tasks =
       await this.tasksRepository.findManyInFamily(
         familyId,
-        query,
+        {
+          assignmentId: query.assignmentId,
+          childId: query.childId,
+          from: query.from
+            ? new Date(query.from)
+            : undefined,
+          to: query.to
+            ? new Date(query.to)
+            : undefined,
+          status: query.status,
+        },
       );
 
     return tasks.map(toTask);
@@ -41,60 +60,68 @@ export class TasksService {
     familyId: string,
     taskId: string,
   ) {
-    const task =
-      await this.tasksRepository.findByIdInFamily(
-        familyId,
-        taskId,
-      );
-
-    if (!task) {
-      throw new AppException(
-        ErrorCode.TASK_NOT_FOUND,
-        'Task not found',
-        HttpStatus.NOT_FOUND,
-      );
-    }
+    const task = await this.getTaskEntity(
+      familyId,
+      taskId,
+    );
 
     return toTask(task);
   }
 
   async createTask(
     familyId: string,
-    createdByUserId: string,
     dto: CreateTaskDto,
   ) {
-    await this.ensureAssigneeIsChild(
-      familyId,
-      dto.assignedToUserId,
-    );
-
-    const task =
-      await this.tasksRepository.createTask({
+    const assignment =
+      await this.taskAssignmentsService.getAssignmentEntity(
         familyId,
-        title: dto.title,
-        description: dto.description,
-        assignedToUserId:
-          dto.assignedToUserId,
-        createdByUserId,
-        points: dto.points,
-        dueDate: dto.dueDate
-          ? new Date(dto.dueDate)
-          : undefined,
-      });
+        dto.assignmentId,
+      );
 
-    await this.notificationsService.notifySafely({
-      userId: task.assignedToUserId,
-      familyId,
-      type: ENotificationType.task_assigned,
-      title: 'New task assigned',
-      body: task.title,
-      data: {
-        taskId: task.id,
-        familyId,
-      },
-    });
+    const date = new Date(dto.date);
 
-    return toTask(task);
+    const existing =
+      await this.tasksRepository.findByAssignmentAndDate(
+        dto.assignmentId,
+        date,
+      );
+
+    if (existing) {
+      throw new AppException(
+        ErrorCode.TASK_ALREADY_EXISTS,
+        'Task already exists for this assignment and date',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    try {
+      const task =
+        await this.tasksRepository.create({
+          id: dto.id,
+          familyId,
+          assignmentId: dto.assignmentId,
+          date,
+          status: dto.status,
+          completedSubtasks:
+            dto.completedSubtasks,
+        });
+
+      return toTask(task);
+    } catch (error) {
+      if (
+        error instanceof
+          Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new AppException(
+          ErrorCode.TASK_ALREADY_EXISTS,
+          'Task already exists',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      throw error;
+    }
   }
 
   async updateTask(
@@ -107,9 +134,7 @@ export class TasksService {
       taskId,
     );
 
-    if (
-      task.status === ETaskStatus.approved
-    ) {
+    if (task.status === ETaskStatus.approved) {
       throw new AppException(
         ErrorCode.TASK_NOT_ALLOWED,
         'Approved tasks cannot be updated',
@@ -117,48 +142,14 @@ export class TasksService {
       );
     }
 
-    if (dto.assignedToUserId) {
-      await this.ensureAssigneeIsChild(
-        familyId,
-        dto.assignedToUserId,
-      );
-    }
-
-    const updateData: {
-      title?: string;
-      description?: string;
-      assignedToUserId?: string;
-      points?: number;
-      dueDate?: Date | null;
-    } = {};
-
-    if (dto.title !== undefined) {
-      updateData.title = dto.title;
-    }
-
-    if (dto.description !== undefined) {
-      updateData.description = dto.description;
-    }
-
-    if (dto.assignedToUserId !== undefined) {
-      updateData.assignedToUserId =
-        dto.assignedToUserId;
-    }
-
-    if (dto.points !== undefined) {
-      updateData.points = dto.points;
-    }
-
-    if (dto.dueDate !== undefined) {
-      updateData.dueDate = dto.dueDate
-        ? new Date(dto.dueDate)
-        : null;
-    }
-
     const updated =
-      await this.tasksRepository.updateTask(
+      await this.tasksRepository.update(
         task.id,
-        updateData,
+        {
+          status: dto.status,
+          completedSubtasks:
+            dto.completedSubtasks,
+        },
       );
 
     return toTask(updated);
@@ -173,9 +164,7 @@ export class TasksService {
       taskId,
     );
 
-    await this.tasksRepository.deleteTask(
-      task.id,
-    );
+    await this.tasksRepository.delete(task.id);
   }
 
   async completeTask(
@@ -197,7 +186,7 @@ export class TasksService {
       taskId,
     );
 
-    if (task.assignedToUserId !== userId) {
+    if (task.assignment.childId !== userId) {
       throw new AppException(
         ErrorCode.TASK_NOT_ALLOWED,
         'This task is not assigned to you',
@@ -214,8 +203,11 @@ export class TasksService {
     }
 
     const updated =
-      await this.tasksRepository.completeTask(
+      await this.tasksRepository.update(
         task.id,
+        {
+          status: ETaskStatus.completed,
+        },
       );
 
     await this.notificationsService.notifyParentsSafely(
@@ -223,11 +215,13 @@ export class TasksService {
       {
         type: ENotificationType.task_completed,
         title: 'Task completed',
-        body: task.title,
+        body: task.assignment.title,
         data: {
           taskId: task.id,
+          assignmentId: task.assignmentId,
           familyId,
           childUserId: userId,
+          date: formatTaskDate(task.date),
         },
       },
       userId,
@@ -253,26 +247,31 @@ export class TasksService {
       );
     }
 
-    await this.ensureAssigneeIsChild(
-      familyId,
-      task.assignedToUserId,
+    const dateKey = formatTaskDate(task.date);
+    const reward = getEffectiveReward(
+      task.assignment,
+      dateKey,
     );
 
     const updated =
       await this.tasksRepository.approveTask(
         task.id,
+        task.assignment.childId,
+        reward,
       );
 
     await this.notificationsService.notifySafely({
-      userId: task.assignedToUserId,
+      userId: task.assignment.childId,
       familyId,
       type: ENotificationType.task_approved,
       title: 'Task approved',
-      body: `"${task.title}" was approved (+${task.points.toNumber()} points)`,
+      body: `"${task.assignment.title}" was approved (+${reward} points)`,
       data: {
         taskId: task.id,
+        assignmentId: task.assignmentId,
         familyId,
-        points: task.points.toNumber(),
+        reward,
+        date: dateKey,
       },
     });
 
@@ -297,23 +296,109 @@ export class TasksService {
     }
 
     const updated =
-      await this.tasksRepository.rejectTask(
+      await this.tasksRepository.update(
         task.id,
+        {
+          status: ETaskStatus.rejected,
+        },
       );
 
     await this.notificationsService.notifySafely({
-      userId: task.assignedToUserId,
+      userId: task.assignment.childId,
       familyId,
       type: ENotificationType.task_rejected,
       title: 'Task rejected',
-      body: `"${task.title}" needs to be done again`,
+      body: `"${task.assignment.title}" needs to be done again`,
       data: {
         taskId: task.id,
+        assignmentId: task.assignmentId,
         familyId,
+        date: formatTaskDate(task.date),
       },
     });
 
     return toTask(updated);
+  }
+
+  async syncTasks(
+    familyId: string,
+    userId: string,
+    dto: SyncTasksDto,
+  ) {
+    const assignments = [];
+
+    for (const assignmentDto of dto.assignments ??
+      []) {
+      try {
+        const created =
+          await this.taskAssignmentsService.createTaskAssignment(
+            familyId,
+            userId,
+            assignmentDto,
+          );
+        assignments.push(created);
+      } catch (error) {
+        if (
+          error instanceof AppException &&
+          (error.getResponse() as { errorCode: string })
+            .errorCode ===
+            ErrorCode.TASK_ALREADY_EXISTS &&
+          assignmentDto.id
+        ) {
+          const updated =
+            await this.taskAssignmentsService.updateTaskAssignment(
+              familyId,
+              assignmentDto.id,
+              assignmentDto,
+            );
+          assignments.push(updated);
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    const tasks = [];
+
+    for (const taskDto of dto.tasks ?? []) {
+      try {
+        const created = await this.createTask(
+          familyId,
+          taskDto,
+        );
+        tasks.push(created);
+      } catch (error) {
+        if (
+          error instanceof AppException &&
+          (error.getResponse() as { errorCode: string })
+            .errorCode ===
+            ErrorCode.TASK_ALREADY_EXISTS
+        ) {
+          const existing =
+            await this.tasksRepository.findByAssignmentAndDate(
+              taskDto.assignmentId,
+              new Date(taskDto.date),
+            );
+
+          if (existing) {
+            const updated =
+              await this.tasksRepository.update(
+                existing.id,
+                {
+                  status: taskDto.status,
+                  completedSubtasks:
+                    taskDto.completedSubtasks,
+                },
+              );
+            tasks.push(toTask(updated));
+          }
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    return { assignments, tasks };
   }
 
   private async getTaskEntity(
@@ -335,24 +420,5 @@ export class TasksService {
     }
 
     return task;
-  }
-
-  private async ensureAssigneeIsChild(
-    familyId: string,
-    userId: string,
-  ) {
-    const member =
-      await this.tasksRepository.findChildInFamily(
-        familyId,
-        userId,
-      );
-
-    if (!member) {
-      throw new AppException(
-        ErrorCode.CHILD_NOT_FOUND,
-        'Assigned child not found in this family',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
   }
 }

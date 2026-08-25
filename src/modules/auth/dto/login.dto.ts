@@ -1,11 +1,21 @@
 import {
+  IsEmail,
+  IsOptional,
   IsString,
   Matches,
+  ValidateIf,
 } from 'class-validator';
 
-export class LoginDto {
+import { RequestLangDto } from '../../../common/dto/request-lang.dto';
+
+export class LoginDto extends RequestLangDto {
+  @ValidateIf(dto => !dto.email)
   @IsString()
-  username!: string;
+  username?: string;
+
+  @ValidateIf(dto => !dto.username)
+  @IsEmail()
+  email?: string;
 
   @IsString()
   @Matches(/^\d{4}$/, {
