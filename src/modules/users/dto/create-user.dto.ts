@@ -1,21 +1,38 @@
-import { IsEmail, IsOptional, IsString, MaxLength, Matches, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+  Matches,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
+
+import { ERole } from '../../../types/user';
 
 export class CreateUserDto {
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  username?: string;
+  @IsIn([ERole.admin, ERole.parent], {
+    message: 'role must be admin or parent',
+  })
+  role!: ERole.admin | ERole.parent;
 
-  @IsOptional()
+  @ValidateIf(dto => dto.role === ERole.admin)
   @IsEmail()
+  @IsNotEmpty()
   @MaxLength(255)
   email?: string;
 
+  @ValidateIf(dto => dto.role === ERole.parent)
   @IsString()
-  // @MinLength(8)
+  @IsNotEmpty()
+  @MinLength(3)
+  @MaxLength(50)
+  username?: string;
+
+  @IsString()
   @Matches(/^\d{4}$/, {
     message: 'pin must be exactly 4 digits',
   })
   pin!: string;
-  // password!: string;
 }

@@ -108,7 +108,7 @@ export class FamiliesRepository {
         data: {
           familyId: family.id,
           userId,
-          role: ERole.parent,
+          role: ERole.admin,
           familyRole: null,
           isOwner: true,
         },

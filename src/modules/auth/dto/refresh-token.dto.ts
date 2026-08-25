@@ -1,6 +1,8 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
-export class RefreshTokenDto {
+import { RequestLangDto } from '../../../common/dto/request-lang.dto';
+
+export class RefreshTokenDto extends RequestLangDto {
   @IsString()
   @IsNotEmpty()
   refreshToken!: string;

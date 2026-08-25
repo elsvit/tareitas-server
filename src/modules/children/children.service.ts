@@ -9,10 +9,20 @@ import { Prisma } from '../../generated/prisma/client';
 
 import { AppException } from '../../common/errors/app.exception';
 import { ErrorCode } from '../../common/errors/error-code';
+import {
+  validateUserCredentials,
+} from '../../common/utils/user-credentials';
 import { toChild } from './child.mapper';
 import { ChildrenRepository } from './children.repository';
 import { CreateChildDto } from './dto/create-child.dto';
 import { UpdateChildDto } from './dto/update-child.dto';
+import { ERole } from '../../types/user';
+
+type ChildMember = NonNullable<
+  Awaited<
+    ReturnType<ChildrenRepository['findChildInFamily']>
+  >
+>;
 
 @Injectable()
 export class ChildrenService {
@@ -27,12 +37,11 @@ export class ChildrenService {
       );
 
     return members
-      .map((member) => member.user.childProfile)
+      .map((member) => this.mapChildMember(member))
       .filter(
-        (profile): profile is NonNullable<typeof profile> =>
-          profile !== null,
-      )
-      .map(toChild);
+        (child): child is NonNullable<typeof child> =>
+          child !== null,
+      );
   }
 
   async getChild(
@@ -53,30 +62,25 @@ export class ChildrenService {
       );
     }
 
-    return toChild(member.user.childProfile);
+    return this.mapChildMember(member)!;
   }
 
   async createChild(
     familyId: string,
     dto: CreateChildDto,
   ) {
-    this.validateLoginCredentials(
-      dto.username,
-      dto.pin,
+    const credentials = validateUserCredentials(
+      ERole.child,
+      { username: dto.username },
     );
-
-    let passwordHash: string | undefined;
-
-    if (dto.pin) {
-      passwordHash = await argon2.hash(dto.pin);
-    }
+    const passwordHash = await argon2.hash(dto.pin);
 
     try {
       const profile =
         await this.childrenRepository.createChild(
           familyId,
           {
-            username: dto.username,
+            username: credentials.username!,
             passwordHash,
             name: dto.name,
             color: dto.color,
@@ -88,7 +92,10 @@ export class ChildrenService {
           },
         );
 
-      return toChild(profile);
+      return toChild(
+        profile,
+        credentials.username,
+      );
     } catch (error) {
       if (
         error instanceof
@@ -126,8 +133,15 @@ export class ChildrenService {
     }
 
     if (dto.username !== undefined || dto.pin !== undefined) {
+      const nextUsername =
+        dto.username ?? member.user.username ?? undefined;
+
+      validateUserCredentials(ERole.child, {
+        username: nextUsername,
+      });
+
       this.validateLoginCredentials(
-        dto.username ?? member.user.username ?? undefined,
+        nextUsername,
         dto.pin,
         dto.username === undefined,
       );
@@ -203,8 +217,14 @@ export class ChildrenService {
     const hasProfileUpdate =
       Object.keys(profileUpdate).length > 0;
 
+    const nextUsername =
+      dto.username ?? member.user.username;
+
     if (!hasProfileUpdate) {
-      return toChild(member.user.childProfile);
+      return toChild(
+        member.user.childProfile,
+        nextUsername,
+      );
     }
 
     const profile =
@@ -213,7 +233,44 @@ export class ChildrenService {
         profileUpdate,
       );
 
-    return toChild(profile);
+    return toChild(profile, nextUsername);
+  }
+
+  async deleteChild(
+    familyId: string,
+    childUserId: string,
+  ) {
+    const member =
+      await this.childrenRepository.findChildInFamily(
+        familyId,
+        childUserId,
+      );
+
+    if (!member?.user.childProfile) {
+      throw new AppException(
+        ErrorCode.CHILD_NOT_FOUND,
+        'Child not found',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    await this.childrenRepository.deleteChild(
+      familyId,
+      childUserId,
+    );
+
+    return { success: true };
+  }
+
+  private mapChildMember(member: ChildMember) {
+    if (!member.user.childProfile) {
+      return null;
+    }
+
+    return toChild(
+      member.user.childProfile,
+      member.user.username,
+    );
   }
 
   private validateLoginCredentials(
@@ -227,17 +284,31 @@ export class ChildrenService {
 
     if (username && !pin) {
       throw new AppException(
-        ErrorCode.VALIDATION_ERROR,
-        'Pin is required when username is provided',
+        ErrorCode.VALIDATION_PIN_REQUIRED_WITH_USERNAME,
+        '',
         HttpStatus.BAD_REQUEST,
+        [
+          {
+            field: 'pin',
+            errorCode:
+              ErrorCode.VALIDATION_PIN_REQUIRED_WITH_USERNAME,
+          },
+        ],
       );
     }
 
     if (pin && !username) {
       throw new AppException(
-        ErrorCode.VALIDATION_ERROR,
-        'Username is required when pin is provided',
+        ErrorCode.VALIDATION_USERNAME_REQUIRED_WITH_PIN,
+        '',
         HttpStatus.BAD_REQUEST,
+        [
+          {
+            field: 'username',
+            errorCode:
+              ErrorCode.VALIDATION_USERNAME_REQUIRED_WITH_PIN,
+          },
+        ],
       );
     }
   }

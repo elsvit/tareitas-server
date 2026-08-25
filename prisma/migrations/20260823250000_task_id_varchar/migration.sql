@@ -1,0 +1,2 @@
+-- No-op: task/assignment ids are already UUID without server-side defaults
+-- (deterministic ids are supplied by the app via uuid v5).

@@ -18,14 +18,11 @@ model User {
   childProfile  ChildProfile?
   familyMembers FamilyMember[]
 
-  invitationsSent     Invitation[] @relation("InvitationInvitedBy")
-  invitationsReceived Invitation[] @relation("InvitationInvitedUser")
-
   parentProfile ParentProfile?
   refreshTokens RefreshToken[]
 
-  tasksAssigned Task[] @relation("TaskAssignedTo")
-  tasksCreated  Task[] @relation("TaskCreatedBy")
+  taskAssignmentsAsChild  TaskAssignment[] @relation("TaskAssignmentChild")
+  taskAssignmentsCreated  TaskAssignment[] @relation("TaskAssignmentCreatedBy")
 
   rewardsCreated      Reward[]           @relation("RewardCreatedBy")
   rewardRedemptions   RewardRedemption[] @relation("RewardRedemptionChild")
@@ -40,12 +37,19 @@ model Family {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
+  taskBaseRevision            Int @default(0) @map("task_base_revision")
+  rewardBaseRevision        Int @default(0) @map("reward_base_revision")
+  bundledTaskCatalogVersion   Int @default(0) @map("bundled_task_catalog_version")
+  bundledRewardCatalogVersion Int @default(0) @map("bundled_reward_catalog_version")
+
   members     FamilyMember[]
-  invitations Invitation[]
+  taskAssignments TaskAssignment[]
   tasks       Task[]
   rewards            Reward[]
   rewardRedemptions  RewardRedemption[]
   notifications    Notification[]
+  taskBaseItems   TaskBaseItem[]
+  rewardBaseItems RewardBaseItem[]
 
   @@map("families")
 }
@@ -93,41 +97,6 @@ model ChildProfile {
   @@map("child_profiles")
 }
 
-model Invitation {
-  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-
-  familyId String @map("family_id") @db.Uuid
-
-  invitedUserId   String? @map("invited_user_id") @db.Uuid
-  invitedEmail    String? @map("invited_email") @db.VarChar(255)
-  invitedUsername String? @map("invited_username") @db.VarChar(50)
-
-  invitedByUserId String @map("invited_by_user_id") @db.Uuid
-
-  role       String  @db.VarChar(20)
-  familyRole String? @map("family_role") @db.VarChar(30)
-
-  token String @unique
-
-  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
-  acceptedAt DateTime? @map("accepted_at") @db.Timestamptz(6)
-  rejectedAt DateTime? @map("rejected_at") @db.Timestamptz(6)
-
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
-
-  invitedByUser User @relation("InvitationInvitedBy", fields: [invitedByUserId], references: [id], onDelete: Cascade)
-
-  invitedUser User? @relation("InvitationInvitedUser", fields: [invitedUserId], references: [id], onDelete: SetNull)
-
-  @@index([familyId])
-  @@index([invitedEmail])
-  @@index([invitedUsername])
-  @@index([invitedUserId])
-  @@map("invitations")
-}
-
 model RefreshToken {
   id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tokenHash String @unique
@@ -144,30 +113,66 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
-model Task {
-  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  familyId    String  @map("family_id") @db.Uuid
+model TaskAssignment {
+  id       String @id @db.Uuid
+  familyId String @map("family_id") @db.Uuid
+  childId  String @map("child_id") @db.Uuid
+
   title       String  @db.VarChar(200)
   description String?
+  reward      Decimal @default(0) @db.Decimal(10, 2)
+  picture     String?
+  color       String? @db.VarChar(50)
 
-  assignedToUserId String @map("assigned_to_user_id") @db.Uuid
-  createdByUserId  String @map("created_by_user_id") @db.Uuid
+  startDate DateTime  @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
+  time      String    @default("00:00") @db.VarChar(5)
 
-  points Decimal @default(0) @db.Decimal(10, 2)
-  status String  @default("pending") @db.VarChar(20)
+  isHabit Boolean @default(false) @map("is_habit")
 
-  dueDate     DateTime? @map("due_date") @db.Date
-  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  repeat Json?
+
+  newTaskBonus    Decimal? @map("new_task_bonus") @db.Decimal(10, 2)
+  newTaskDuration Int?     @map("new_task_duration")
+
+  subtasks Json?
+  changes  Json     @default("{}")
+
+  createdByUserId String @map("created_by_user_id") @db.Uuid
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  family     Family @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tasks_family_fk")
-  assignedTo User   @relation("TaskAssignedTo", fields: [assignedToUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tasks_assigned_to_fk")
-  createdBy  User   @relation("TaskCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tasks_created_by_fk")
+  family    Family @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "task_assignments_family_fk")
+  child     User   @relation("TaskAssignmentChild", fields: [childId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "task_assignments_child_fk")
+  createdBy User   @relation("TaskAssignmentCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "task_assignments_created_by_fk")
+  tasks     Task[]
 
   @@index([familyId])
-  @@index([assignedToUserId])
+  @@index([childId])
+  @@map("task_assignments")
+}
+
+model Task {
+  id           String @id @db.Uuid
+  familyId     String @map("family_id") @db.Uuid
+  assignmentId String @map("assignment_id") @db.Uuid
+
+  date   DateTime @db.Date
+  status String   @default("pending") @db.VarChar(20)
+
+  completedSubtasks Json @default("[]") @map("completed_subtasks")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  family     Family         @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tasks_family_fk")
+  assignment TaskAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tasks_assignment_fk")
+
+  @@unique([assignmentId, date], map: "tasks_assignment_id_date_unique")
+  @@index([familyId])
+  @@index([assignmentId])
+  @@index([date])
   @@index([status])
   @@map("tasks")
 }
@@ -235,4 +240,48 @@ model Notification {
   @@index([userId])
   @@index([userId, readAt])
   @@map("notifications")
+}
+
+model TaskBaseItem {
+  id       String @db.VarChar(100)
+  familyId String @map("family_id") @db.Uuid
+
+  name        String   @db.VarChar(200)
+  description String?
+  reward      Decimal? @db.Decimal(10, 2)
+  picture     String?
+  time        String?  @db.VarChar(5)
+  color       String?  @db.VarChar(50)
+  subtasks    Json?
+  isHidden    Boolean  @default(false) @map("is_hidden")
+  source      String   @default("custom") @db.VarChar(20)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "task_base_items_family_fk")
+
+  @@id([familyId, id])
+  @@index([familyId])
+  @@map("task_base_items")
+}
+
+model RewardBaseItem {
+  id       String @db.VarChar(100)
+  familyId String @map("family_id") @db.Uuid
+
+  title    String  @db.VarChar(200)
+  reward   Decimal @db.Decimal(10, 2)
+  picture  String?
+  isHidden Boolean @default(false) @map("is_hidden")
+  source   String  @default("custom") @db.VarChar(20)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "reward_base_items_family_fk")
+
+  @@id([familyId, id])
+  @@index([familyId])
+  @@map("reward_base_items")
 }

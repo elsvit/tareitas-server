@@ -51,8 +51,8 @@ export class ChildrenRepository {
   createChild(
     familyId: string,
     data: {
-      username?: string;
-      passwordHash?: string;
+      username: string;
+      passwordHash: string;
       name: string;
       color?: string;
       avatar?: string;
@@ -118,6 +118,27 @@ export class ChildrenRepository {
     return this.prisma.user.update({
       where: { id: userId },
       data,
+    });
+  }
+
+  deleteChild(familyId: string, childUserId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.familyMember.delete({
+        where: {
+          familyId_userId: {
+            familyId,
+            userId: childUserId,
+          },
+        },
+      });
+
+      await tx.childProfile.deleteMany({
+        where: { userId: childUserId },
+      });
+
+      await tx.user.delete({
+        where: { id: childUserId },
+      });
     });
   }
 }

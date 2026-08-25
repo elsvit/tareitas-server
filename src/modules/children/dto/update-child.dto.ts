@@ -10,7 +10,9 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class UpdateChildDto {
+import { RequestLangDto } from '../../../common/dto/request-lang.dto';
+
+export class UpdateChildDto extends RequestLangDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)

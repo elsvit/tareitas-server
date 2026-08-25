@@ -1,7 +1,4 @@
 export enum ENotificationType {
-  invitation_received = 'invitation_received',
-  invitation_accepted = 'invitation_accepted',
-  invitation_rejected = 'invitation_rejected',
   task_assigned = 'task_assigned',
   task_completed = 'task_completed',
   task_approved = 'task_approved',

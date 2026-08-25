@@ -1,27 +1,14 @@
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../db/prisma.service';
+import { createTaskId } from '../../common/utils/task-id';
 import { ETaskStatus } from '../../types/task';
-import { ERole } from '../../types/user';
 
 @Injectable()
 export class TasksRepository {
   constructor(
     private readonly prisma: PrismaService,
   ) {}
-
-  findChildInFamily(
-    familyId: string,
-    userId: string,
-  ) {
-    return this.prisma.familyMember.findFirst({
-      where: {
-        familyId,
-        userId,
-        role: ERole.child,
-      },
-    });
-  }
 
   findByIdInFamily(
     familyId: string,
@@ -32,88 +19,115 @@ export class TasksRepository {
         id: taskId,
         familyId,
       },
+      include: {
+        assignment: true,
+      },
     });
   }
 
   findManyInFamily(
     familyId: string,
     filters?: {
-      assignedToUserId?: string;
+      assignmentId?: string;
+      childId?: string;
+      from?: Date;
+      to?: Date;
       status?: ETaskStatus;
     },
   ) {
     return this.prisma.task.findMany({
       where: {
         familyId,
-        assignedToUserId:
-          filters?.assignedToUserId,
+        assignmentId: filters?.assignmentId,
         status: filters?.status,
+        date: {
+          gte: filters?.from,
+          lte: filters?.to,
+        },
+        ...(filters?.childId
+          ? {
+              assignment: {
+                childId: filters.childId,
+              },
+            }
+          : {}),
       },
       orderBy: [
-        { dueDate: 'asc' },
+        { date: 'asc' },
         { createdAt: 'desc' },
       ],
     });
   }
 
-  createTask(data: {
-    familyId: string;
-    title: string;
-    description?: string;
-    assignedToUserId: string;
-    createdByUserId: string;
-    points?: number;
-    dueDate?: Date;
-  }) {
-    return this.prisma.task.create({
-      data: {
-        familyId: data.familyId,
-        title: data.title,
-        description: data.description,
-        assignedToUserId:
-          data.assignedToUserId,
-        createdByUserId:
-          data.createdByUserId,
-        points: data.points ?? 0,
-        dueDate: data.dueDate,
-        status: ETaskStatus.pending,
+  findByAssignmentAndDate(
+    assignmentId: string,
+    date: Date,
+  ) {
+    return this.prisma.task.findUnique({
+      where: {
+        assignmentId_date: {
+          assignmentId,
+          date,
+        },
       },
     });
   }
 
-  updateTask(
+  create(data: {
+    id?: string;
+    familyId: string;
+    assignmentId: string;
+    date: Date;
+    status?: ETaskStatus;
+    completedSubtasks?: string[];
+  }) {
+    return this.prisma.task.create({
+      data: {
+        id:
+          data.id ??
+          createTaskId(
+            data.assignmentId,
+            data.date,
+          ),
+        familyId: data.familyId,
+        assignmentId: data.assignmentId,
+        date: data.date,
+        status:
+          data.status ?? ETaskStatus.pending,
+        completedSubtasks:
+          data.completedSubtasks ?? [],
+      },
+    });
+  }
+
+  update(
     taskId: string,
     data: {
-      title?: string;
-      description?: string;
-      assignedToUserId?: string;
-      points?: number;
-      dueDate?: Date | null;
+      status?: ETaskStatus;
+      completedSubtasks?: string[];
     },
   ) {
     return this.prisma.task.update({
       where: { id: taskId },
-      data,
+      data: {
+        status: data.status,
+        completedSubtasks:
+          data.completedSubtasks,
+      },
     });
   }
 
-  deleteTask(taskId: string) {
+  delete(taskId: string) {
     return this.prisma.task.delete({
       where: { id: taskId },
     });
   }
 
-  completeTask(taskId: string) {
-    return this.prisma.task.update({
-      where: { id: taskId },
-      data: {
-        status: ETaskStatus.completed,
-        completedAt: new Date(),
-      },
-    });
-  }
-
-  approveTask(taskId: string) {
+  approveTask(
+    taskId: string,
+    childId: string,
+    reward: number,
+  ) {
     return this.prisma.$transaction(
       async (tx) => {
         const task = await tx.task.update({
@@ -124,12 +138,10 @@ export class TasksRepository {
         });
 
         await tx.childProfile.update({
-          where: {
-            userId: task.assignedToUserId,
-          },
+          where: { userId: childId },
           data: {
             reward: {
-              increment: task.points,
+              increment: reward,
             },
           },
         });
@@ -137,15 +149,5 @@ export class TasksRepository {
         return task;
       },
     );
-  }
-
-  rejectTask(taskId: string) {
-    return this.prisma.task.update({
-      where: { id: taskId },
-      data: {
-        status: ETaskStatus.pending,
-        completedAt: null,
-      },
-    });
   }
 }

@@ -21,11 +21,12 @@ import { ERole } from '../../types/user';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtPayload } from '../auth/types/jwt-payload';
 
-import { CreateTaskDto } from './dto/create-task.dto';
 import {
+  CreateTaskDto,
   ListTasksQueryDto,
+  SyncTasksDto,
   UpdateTaskDto,
-} from './dto/update-task.dto';
+} from './dto/task.dto';
 import { TasksService } from './tasks.service';
 
 @Controller('families/:familyId/tasks')
@@ -35,9 +36,6 @@ export class TasksController {
     private readonly tasksService: TasksService,
   ) {}
 
-  /**
-   * GET /families/:familyId/tasks
-   */
   @Get()
   listTasks(
     @Param('familyId') familyId: string,
@@ -49,9 +47,20 @@ export class TasksController {
     );
   }
 
-  /**
-   * GET /families/:familyId/tasks/:taskId
-   */
+  @Post('sync')
+  @RequireRole(ERole.admin, ERole.parent)
+  syncTasks(
+    @CurrentUser() user: JwtPayload,
+    @Param('familyId') familyId: string,
+    @Body() dto: SyncTasksDto,
+  ) {
+    return this.tasksService.syncTasks(
+      familyId,
+      user.sub,
+      dto,
+    );
+  }
+
   @Get(':taskId')
   getTask(
     @Param('familyId') familyId: string,
@@ -63,28 +72,18 @@ export class TasksController {
     );
   }
 
-  /**
-   * POST /families/:familyId/tasks
-   */
   @Post()
-  @RequireRole(ERole.parent)
   createTask(
-    @CurrentUser() user: JwtPayload,
     @Param('familyId') familyId: string,
     @Body() dto: CreateTaskDto,
   ) {
     return this.tasksService.createTask(
       familyId,
-      user.sub,
       dto,
     );
   }
 
-  /**
-   * PATCH /families/:familyId/tasks/:taskId
-   */
   @Patch(':taskId')
-  @RequireRole(ERole.parent)
   updateTask(
     @Param('familyId') familyId: string,
     @Param('taskId') taskId: string,
@@ -97,11 +96,8 @@ export class TasksController {
     );
   }
 
-  /**
-   * DELETE /families/:familyId/tasks/:taskId
-   */
   @Delete(':taskId')
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteTask(
     @Param('familyId') familyId: string,
@@ -113,9 +109,6 @@ export class TasksController {
     );
   }
 
-  /**
-   * POST /families/:familyId/tasks/:taskId/complete
-   */
   @Post(':taskId/complete')
   completeTask(
     @CurrentUser() user: JwtPayload,
@@ -132,9 +125,6 @@ export class TasksController {
     );
   }
 
-  /**
-   * POST /families/:familyId/tasks/:taskId/approve
-   */
   @Post(':taskId/approve')
   @RequireRole(ERole.parent)
   approveTask(
@@ -147,9 +137,6 @@ export class TasksController {
     );
   }
 
-  /**
-   * POST /families/:familyId/tasks/:taskId/reject
-   */
   @Post(':taskId/reject')
   @RequireRole(ERole.parent)
   rejectTask(

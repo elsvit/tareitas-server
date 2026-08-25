@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -54,7 +55,7 @@ export class ChildrenController {
    * POST /families/:familyId/children
    */
   @Post()
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   createChild(
     @Param('familyId') familyId: string,
     @Body() dto: CreateChildDto,
@@ -69,7 +70,7 @@ export class ChildrenController {
    * PATCH /families/:familyId/children/:childUserId
    */
   @Patch(':childUserId')
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   updateChild(
     @Param('familyId') familyId: string,
     @Param('childUserId') childUserId: string,
@@ -79,6 +80,18 @@ export class ChildrenController {
       familyId,
       childUserId,
       dto,
+    );
+  }
+
+  @Delete(':childUserId')
+  @RequireRole(ERole.admin, ERole.parent)
+  deleteChild(
+    @Param('familyId') familyId: string,
+    @Param('childUserId') childUserId: string,
+  ) {
+    return this.childrenService.deleteChild(
+      familyId,
+      childUserId,
     );
   }
 }

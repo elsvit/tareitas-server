@@ -11,8 +11,12 @@ import { PrismaService } from '../../db/prisma.service';
 
 import { AppException } from '../../common/errors/app.exception';
 import { ErrorCode } from '../../common/errors/error-code';
+import {
+  validateUserCredentials,
+} from '../../common/utils/user-credentials';
 
 import { CreateUserDto } from './dto/create-user.dto';
+import { ERole } from '../../types/user';
 
 @Injectable()
 export class UsersService {
@@ -21,21 +25,21 @@ export class UsersService {
   ) {}
 
   async create(dto: CreateUserDto) {
-    if (!dto.username && !dto.email) {
-      throw new AppException(
-        ErrorCode.VALIDATION_ERROR,
-        'Username or email is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    const credentials = validateUserCredentials(
+      dto.role,
+      {
+        email: dto.email,
+        username: dto.username,
+      },
+    );
 
     const passwordHash = await argon2.hash(dto.pin);
 
     try {
       const user = await this.prisma.user.create({
         data: {
-          username: dto.username,
-          email: dto.email,
+          email: credentials.email,
+          username: credentials.username,
           passwordHash,
         },
       });
