@@ -184,6 +184,7 @@ model Reward {
   description String?
   cost        Decimal @db.Decimal(10, 2)
   isActive    Boolean @default(true) @map("is_active")
+  childUserIds String[] @default([]) @map("child_user_ids") @db.Uuid
 
   createdByUserId String @map("created_by_user_id") @db.Uuid
 

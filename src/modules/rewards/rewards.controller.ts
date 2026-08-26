@@ -51,6 +51,8 @@ export class RewardsController {
     return this.rewardsService.listRewards(
       familyId,
       includeInactive,
+      member.role as ERole,
+      member.userId,
     );
   }
 

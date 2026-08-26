@@ -19,6 +19,7 @@ export function toReward(
       reward.description ?? undefined,
     cost: reward.cost.toNumber(),
     isActive: reward.isActive,
+    childUserIds: reward.childUserIds,
     createdByUserId:
       reward.createdByUserId,
     createdAt:

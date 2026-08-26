@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsNotEmpty,
   IsNumber,
@@ -25,6 +26,11 @@ export class CreateRewardDto {
   @IsNumber()
   @Min(0)
   cost!: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  childUserIds?: string[];
 }
 
 export class UpdateRewardDto {
@@ -47,6 +53,11 @@ export class UpdateRewardDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  childUserIds?: string[];
 }
 
 export class ListRedemptionsQueryDto {
