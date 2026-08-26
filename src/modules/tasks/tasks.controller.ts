@@ -126,7 +126,7 @@ export class TasksController {
   }
 
   @Post(':taskId/approve')
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   approveTask(
     @Param('familyId') familyId: string,
     @Param('taskId') taskId: string,
@@ -138,12 +138,24 @@ export class TasksController {
   }
 
   @Post(':taskId/reject')
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   rejectTask(
     @Param('familyId') familyId: string,
     @Param('taskId') taskId: string,
   ) {
     return this.tasksService.rejectTask(
+      familyId,
+      taskId,
+    );
+  }
+
+  @Post(':taskId/unapprove')
+  @RequireRole(ERole.admin, ERole.parent)
+  unapproveTask(
+    @Param('familyId') familyId: string,
+    @Param('taskId') taskId: string,
+  ) {
+    return this.tasksService.unapproveTask(
       familyId,
       taskId,
     );

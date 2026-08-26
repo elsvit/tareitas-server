@@ -45,7 +45,8 @@ export class RewardsController {
     @Param('familyId') familyId: string,
   ) {
     const includeInactive =
-      member.role === ERole.parent;
+      member.role === ERole.parent ||
+      member.role === ERole.admin;
 
     return this.rewardsService.listRewards(
       familyId,
@@ -57,7 +58,7 @@ export class RewardsController {
    * POST /families/:familyId/rewards
    */
   @Post()
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   createReward(
     @CurrentUser() user: JwtPayload,
     @Param('familyId') familyId: string,
@@ -88,7 +89,7 @@ export class RewardsController {
    * POST /families/:familyId/rewards/redemptions/:redemptionId/approve
    */
   @Post('redemptions/:redemptionId/approve')
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   approveRedemption(
     @Param('familyId') familyId: string,
     @Param('redemptionId')
@@ -104,7 +105,7 @@ export class RewardsController {
    * POST /families/:familyId/rewards/redemptions/:redemptionId/reject
    */
   @Post('redemptions/:redemptionId/reject')
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   rejectRedemption(
     @Param('familyId') familyId: string,
     @Param('redemptionId')
@@ -148,7 +149,7 @@ export class RewardsController {
    * PATCH /families/:familyId/rewards/:rewardId
    */
   @Patch(':rewardId')
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   updateReward(
     @Param('familyId') familyId: string,
     @Param('rewardId') rewardId: string,
@@ -165,7 +166,7 @@ export class RewardsController {
    * DELETE /families/:familyId/rewards/:rewardId
    */
   @Delete(':rewardId')
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteReward(
     @Param('familyId') familyId: string,

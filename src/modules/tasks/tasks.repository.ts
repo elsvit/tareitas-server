@@ -35,15 +35,22 @@ export class TasksRepository {
       status?: ETaskStatus;
     },
   ) {
+    const dateFilter =
+      filters?.from || filters?.to
+        ? {
+            date: {
+              ...(filters.from ? { gte: filters.from } : {}),
+              ...(filters.to ? { lte: filters.to } : {}),
+            },
+          }
+        : {};
+
     return this.prisma.task.findMany({
       where: {
         familyId,
         assignmentId: filters?.assignmentId,
         status: filters?.status,
-        date: {
-          gte: filters?.from,
-          lte: filters?.to,
-        },
+        ...dateFilter,
         ...(filters?.childId
           ? {
               assignment: {
@@ -142,6 +149,34 @@ export class TasksRepository {
           data: {
             reward: {
               increment: reward,
+            },
+          },
+        });
+
+        return task;
+      },
+    );
+  }
+
+  unapproveTask(
+    taskId: string,
+    childId: string,
+    reward: number,
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const task = await tx.task.update({
+          where: { id: taskId },
+          data: {
+            status: ETaskStatus.completed,
+          },
+        });
+
+        await tx.childProfile.update({
+          where: { userId: childId },
+          data: {
+            reward: {
+              decrement: reward,
             },
           },
         });

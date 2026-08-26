@@ -56,7 +56,7 @@ export class TaskAssignmentsController {
   }
 
   @Post()
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   createTaskAssignment(
     @CurrentUser() user: JwtPayload,
     @Param('familyId') familyId: string,
@@ -70,7 +70,7 @@ export class TaskAssignmentsController {
   }
 
   @Patch(':assignmentId')
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   updateTaskAssignment(
     @Param('familyId') familyId: string,
     @Param('assignmentId')
@@ -85,7 +85,7 @@ export class TaskAssignmentsController {
   }
 
   @Delete(':assignmentId')
-  @RequireRole(ERole.parent)
+  @RequireRole(ERole.admin, ERole.parent)
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteTaskAssignment(
     @Param('familyId') familyId: string,

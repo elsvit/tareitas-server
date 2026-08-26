@@ -17,6 +17,7 @@ import { RewardsModule } from './modules/rewards/rewards.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { FamilyMembersModule } from './modules/family-members/family-members.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
     NotificationsModule,
     UploadsModule,
     CatalogModule,
+    FamilyMembersModule,
   ],
   providers: [
     {

@@ -278,6 +278,39 @@ export class TasksService {
     return toTask(updated);
   }
 
+  async unapproveTask(
+    familyId: string,
+    taskId: string,
+  ) {
+    const task = await this.getTaskEntity(
+      familyId,
+      taskId,
+    );
+
+    if (task.status !== ETaskStatus.approved) {
+      throw new AppException(
+        ErrorCode.TASK_INVALID_STATUS,
+        'Only approved tasks can be unapproved',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    const dateKey = formatTaskDate(task.date);
+    const reward = getEffectiveReward(
+      task.assignment,
+      dateKey,
+    );
+
+    const updated =
+      await this.tasksRepository.unapproveTask(
+        task.id,
+        task.assignment.childId,
+        reward,
+      );
+
+    return toTask(updated);
+  }
+
   async rejectTask(
     familyId: string,
     taskId: string,
