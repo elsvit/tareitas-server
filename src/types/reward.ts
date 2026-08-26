@@ -5,6 +5,7 @@ export interface IReward {
   description?: string;
   cost: number;
   isActive: boolean;
+  childUserIds: string[];
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;

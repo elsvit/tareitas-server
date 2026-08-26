@@ -65,6 +65,7 @@ export class RewardsRepository {
     description?: string;
     cost: number;
     createdByUserId: string;
+    childUserIds?: string[];
   }) {
     return this.prisma.reward.create({
       data: {
@@ -74,6 +75,7 @@ export class RewardsRepository {
         cost: data.cost,
         createdByUserId:
           data.createdByUserId,
+        childUserIds: data.childUserIds ?? [],
       },
     });
   }
@@ -85,6 +87,7 @@ export class RewardsRepository {
       description?: string;
       cost?: number;
       isActive?: boolean;
+      childUserIds?: string[];
     },
   ) {
     return this.prisma.reward.update({

@@ -30,14 +30,23 @@ export class RewardsService {
   listRewards(
     familyId: string,
     includeInactive: boolean,
+    memberRole: ERole,
+    memberUserId: string,
   ) {
     return this.rewardsRepository
       .findRewardsInFamily(
         familyId,
         !includeInactive,
       )
-      .then((rewards) =>
-        rewards.map(toReward),
+      .then(rewards =>
+        rewards
+          .filter(reward =>
+            memberRole !== ERole.child
+              ? true
+              : reward.childUserIds.length === 0 ||
+                reward.childUserIds.includes(memberUserId),
+          )
+          .map(toReward),
       );
   }
 
@@ -59,15 +68,19 @@ export class RewardsService {
     createdByUserId: string,
     dto: CreateRewardDto,
   ) {
-    return this.rewardsRepository
-      .createReward({
+    return this.validateChildUserIds(
+      familyId,
+      dto.childUserIds,
+    ).then(() =>
+      this.rewardsRepository.createReward({
         familyId,
         title: dto.title,
         description: dto.description,
         cost: dto.cost,
         createdByUserId,
-      })
-      .then(toReward);
+        childUserIds: dto.childUserIds,
+      }),
+    ).then(toReward);
   }
 
   async updateReward(
@@ -81,11 +94,19 @@ export class RewardsService {
         rewardId,
       );
 
+    if (dto.childUserIds !== undefined) {
+      await this.validateChildUserIds(
+        familyId,
+        dto.childUserIds,
+      );
+    }
+
     const updateData: {
       title?: string;
       description?: string;
       cost?: number;
       isActive?: boolean;
+      childUserIds?: string[];
     } = {};
 
     if (dto.title !== undefined) {
@@ -103,6 +124,10 @@ export class RewardsService {
 
     if (dto.isActive !== undefined) {
       updateData.isActive = dto.isActive;
+    }
+
+    if (dto.childUserIds !== undefined) {
+      updateData.childUserIds = dto.childUserIds;
     }
 
     const updated =
@@ -168,6 +193,17 @@ export class RewardsService {
         ErrorCode.REWARD_INACTIVE,
         'This reward is no longer available',
         HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (
+      reward.childUserIds.length > 0 &&
+      !reward.childUserIds.includes(childUserId)
+    ) {
+      throw new AppException(
+        ErrorCode.REWARD_NOT_ALLOWED,
+        'This reward is not assigned to this child',
+        HttpStatus.FORBIDDEN,
       );
     }
 
@@ -402,6 +438,31 @@ export class RewardsService {
       balance:
         member.user.childProfile.reward.toNumber(),
     };
+  }
+
+  private async validateChildUserIds(
+    familyId: string,
+    childUserIds?: string[],
+  ) {
+    if (!childUserIds?.length) {
+      return;
+    }
+
+    for (const childUserId of childUserIds) {
+      const member =
+        await this.rewardsRepository.findChildInFamily(
+          familyId,
+          childUserId,
+        );
+
+      if (!member?.user.childProfile) {
+        throw new AppException(
+          ErrorCode.CHILD_NOT_FOUND,
+          'Child not found in this family',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+    }
   }
 
   private async getRewardEntity(
