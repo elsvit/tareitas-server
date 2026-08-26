@@ -118,6 +118,22 @@ export class RewardsController {
   }
 
   /**
+   * POST /families/:familyId/rewards/redemptions/:redemptionId/complete
+   */
+  @Post('redemptions/:redemptionId/complete')
+  @RequireRole(ERole.admin, ERole.parent)
+  completeRedemption(
+    @Param('familyId') familyId: string,
+    @Param('redemptionId')
+    redemptionId: string,
+  ) {
+    return this.rewardsService.completeRedemption(
+      familyId,
+      redemptionId,
+    );
+  }
+
+  /**
    * GET /families/:familyId/rewards/balance/:childUserId
    */
   @Get('balance/:childUserId')

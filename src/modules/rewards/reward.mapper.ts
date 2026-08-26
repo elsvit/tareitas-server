@@ -45,5 +45,7 @@ export function toRewardRedemption(
       redemption.approvedAt?.toISOString(),
     rejectedAt:
       redemption.rejectedAt?.toISOString(),
+    completedAt:
+      redemption.completedAt?.toISOString(),
   };
 }

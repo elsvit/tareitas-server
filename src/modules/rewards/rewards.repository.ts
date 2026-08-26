@@ -212,6 +212,15 @@ export class RewardsRepository {
     });
   }
 
+  completeRedemption(redemptionId: string) {
+    return this.prisma.rewardRedemption.update({
+      where: { id: redemptionId },
+      data: {
+        completedAt: new Date(),
+      },
+    });
+  }
+
   getChildBalance(childUserId: string) {
     return this.prisma.childProfile.findUnique({
       where: { userId: childUserId },
