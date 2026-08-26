@@ -26,4 +26,5 @@ export interface IRewardRedemption {
   createdAt: string;
   approvedAt?: string;
   rejectedAt?: string;
+  completedAt?: string;
 }

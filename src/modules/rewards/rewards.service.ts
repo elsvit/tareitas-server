@@ -346,6 +346,39 @@ export class RewardsService {
     return toRewardRedemption(updated);
   }
 
+  async completeRedemption(
+    familyId: string,
+    redemptionId: string,
+  ) {
+    const redemption =
+      await this.getRedemptionEntity(
+        familyId,
+        redemptionId,
+      );
+
+    if (
+      redemption.status !==
+      ERewardRedemptionStatus.approved
+    ) {
+      throw new AppException(
+        ErrorCode.REWARD_REDEMPTION_INVALID_STATUS,
+        'Only approved redemptions can be completed',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    if (redemption.completedAt) {
+      return toRewardRedemption(redemption);
+    }
+
+    const updated =
+      await this.rewardsRepository.completeRedemption(
+        redemption.id,
+      );
+
+    return toRewardRedemption(updated);
+  }
+
   async getChildBalance(
     familyId: string,
     childUserId: string,
