@@ -183,6 +183,7 @@ model Reward {
   familyId    String  @map("family_id") @db.Uuid
   title       String  @db.VarChar(200)
   description String?
+  picture     String?
   cost        Decimal @db.Decimal(10, 2)
   isActive    Boolean @default(true) @map("is_active")
   childUserIds String[] @default([]) @map("child_user_ids") @db.Uuid

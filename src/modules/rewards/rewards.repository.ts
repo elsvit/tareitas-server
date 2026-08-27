@@ -63,6 +63,7 @@ export class RewardsRepository {
     familyId: string;
     title: string;
     description?: string;
+    picture?: string;
     cost: number;
     createdByUserId: string;
     childUserIds?: string[];
@@ -72,6 +73,7 @@ export class RewardsRepository {
         familyId: data.familyId,
         title: data.title,
         description: data.description,
+        picture: data.picture,
         cost: data.cost,
         createdByUserId:
           data.createdByUserId,
@@ -85,6 +87,7 @@ export class RewardsRepository {
     data: {
       title?: string;
       description?: string;
+      picture?: string;
       cost?: number;
       isActive?: boolean;
       childUserIds?: string[];

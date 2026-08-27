@@ -3,6 +3,7 @@ export interface IReward {
   familyId: string;
   title: string;
   description?: string;
+  picture?: string;
   cost: number;
   isActive: boolean;
   childUserIds: string[];

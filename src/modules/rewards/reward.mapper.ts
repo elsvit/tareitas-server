@@ -17,6 +17,7 @@ export function toReward(
     title: reward.title,
     description:
       reward.description ?? undefined,
+    picture: reward.picture ?? undefined,
     cost: reward.cost.toNumber(),
     isActive: reward.isActive,
     childUserIds: reward.childUserIds,
