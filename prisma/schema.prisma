@@ -41,6 +41,7 @@ model Family {
   rewardBaseRevision        Int @default(0) @map("reward_base_revision")
   bundledTaskCatalogVersion   Int @default(0) @map("bundled_task_catalog_version")
   bundledRewardCatalogVersion Int @default(0) @map("bundled_reward_catalog_version")
+  earnedRewardPeriods         Json @default("[]") @map("earned_reward_periods")
 
   members     FamilyMember[]
   taskAssignments TaskAssignment[]
