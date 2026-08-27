@@ -1,5 +1,8 @@
 import {
+  Body,
   Controller,
+  Delete,
+  Get,
   Param,
   Post,
   Req,
@@ -10,9 +13,17 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { FamilyMemberGuard } from '../../common/guards/family-member.guard';
+import { ERole } from '../../types/user';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtPayload } from '../auth/types/jwt-payload';
 
+import {
+  DeleteFamilyImageDto,
+  UploadFamilyImageDto,
+} from './dto/family-image.dto';
 import { UploadsService } from './uploads.service';
 import { UploadedImageFile } from './uploads.types';
 
@@ -23,6 +34,27 @@ export class UploadsController {
     private readonly uploadsService: UploadsService,
   ) {}
 
+  @Get('library')
+  listLibrary(
+    @Param('familyId') familyId: string,
+  ) {
+    return this.uploadsService.listFamilyImages(
+      familyId,
+    );
+  }
+
+  @Delete('library')
+  @RequireRole(ERole.admin, ERole.parent)
+  deleteFromLibrary(
+    @Param('familyId') familyId: string,
+    @Body() dto: DeleteFamilyImageDto,
+  ) {
+    return this.uploadsService.deleteFamilyImage(
+      familyId,
+      dto.path,
+    );
+  }
+
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
@@ -32,12 +64,16 @@ export class UploadsController {
   uploadImage(
     @Param('familyId') familyId: string,
     @UploadedFile() file: UploadedImageFile,
+    @Body() dto: UploadFamilyImageDto,
+    @CurrentUser() user: JwtPayload,
     @Req() req: Request,
   ) {
     const saved =
       this.uploadsService.saveFamilyImage(
         familyId,
         file,
+        user.sub,
+        dto.kind,
       );
 
     return saved.then((result) => {
