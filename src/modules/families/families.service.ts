@@ -8,6 +8,8 @@ import { ErrorCode } from '../../common/errors/error-code';
 import { ParentProfileInputDto } from '../parent-profiles/dto/parent-profile-input.dto';
 import { toFamilyResponse } from './family.mapper';
 import { FamiliesRepository } from './families.repository';
+import { parseEarnedRewardPeriods } from './earned-reward-period.mapper';
+import { PutEarnedRewardPeriodsDto } from './dto/earned-reward-periods.dto';
 
 @Injectable()
 export class FamiliesService {
@@ -76,5 +78,43 @@ export class FamiliesService {
       familyId,
       name,
     );
+  }
+
+  async getEarnedRewardPeriods(familyId: string) {
+    const family =
+      await this.familiesRepository.getEarnedRewardPeriods(
+        familyId,
+      );
+
+    if (!family) {
+      throw new AppException(
+        ErrorCode.FAMILY_NOT_FOUND,
+        'Family not found',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return {
+      periods: parseEarnedRewardPeriods(
+        family.earnedRewardPeriods,
+      ),
+    };
+  }
+
+  async putEarnedRewardPeriods(
+    familyId: string,
+    dto: PutEarnedRewardPeriodsDto,
+  ) {
+    const family =
+      await this.familiesRepository.updateEarnedRewardPeriods(
+        familyId,
+        dto.periods,
+      );
+
+    return {
+      periods: parseEarnedRewardPeriods(
+        family.earnedRewardPeriods,
+      ),
+    };
   }
 }

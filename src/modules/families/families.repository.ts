@@ -140,4 +140,24 @@ export class FamiliesRepository {
       },
     });
   }
+
+  getEarnedRewardPeriods(familyId: string) {
+    return this.prisma.family.findUnique({
+      where: { id: familyId },
+      select: { earnedRewardPeriods: true },
+    });
+  }
+
+  updateEarnedRewardPeriods(
+    familyId: string,
+    periods: unknown,
+  ) {
+    return this.prisma.family.update({
+      where: { id: familyId },
+      data: {
+        earnedRewardPeriods: periods as object,
+      },
+      select: { earnedRewardPeriods: true },
+    });
+  }
 }
