@@ -22,6 +22,10 @@ export class CreateRewardDto {
   @MaxLength(2000)
   description?: string;
 
+  @IsOptional()
+  @IsString()
+  picture?: string;
+
   @Type(() => Number)
   @IsNumber()
   @Min(0)
@@ -43,6 +47,10 @@ export class UpdateRewardDto {
   @IsString()
   @MaxLength(2000)
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  picture?: string;
 
   @IsOptional()
   @Type(() => Number)

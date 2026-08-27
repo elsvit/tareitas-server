@@ -76,6 +76,7 @@ export class RewardsService {
         familyId,
         title: dto.title,
         description: dto.description,
+        picture: dto.picture,
         cost: dto.cost,
         createdByUserId,
         childUserIds: dto.childUserIds,
@@ -104,6 +105,7 @@ export class RewardsService {
     const updateData: {
       title?: string;
       description?: string;
+      picture?: string;
       cost?: number;
       isActive?: boolean;
       childUserIds?: string[];
@@ -116,6 +118,10 @@ export class RewardsService {
     if (dto.description !== undefined) {
       updateData.description =
         dto.description;
+    }
+
+    if (dto.picture !== undefined) {
+      updateData.picture = dto.picture;
     }
 
     if (dto.cost !== undefined) {
