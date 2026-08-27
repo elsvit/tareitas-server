@@ -25,6 +25,7 @@ export interface ITaskAssignmentChange {
   picture?: string;
   newTaskBonus?: number;
   newTaskDuration?: number;
+  excluded?: boolean;
 }
 
 export interface ITaskAssignmentRepeat {
