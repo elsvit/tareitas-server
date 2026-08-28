@@ -5,7 +5,7 @@ import {
   IsString,
 } from 'class-validator';
 
-import { FAMILY_IMAGE_KINDS } from '../../types/family-image';
+import { FAMILY_IMAGE_KINDS } from '../../../types/family-image';
 
 export class DeleteFamilyImageDto {
   @IsString()
