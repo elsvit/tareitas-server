@@ -20,6 +20,7 @@ model User {
 
   parentProfile ParentProfile?
   refreshTokens RefreshToken[]
+  passwordResetCodes PasswordResetCode[]
 
   taskAssignmentsAsChild  TaskAssignment[] @relation("TaskAssignmentChild")
   taskAssignmentsCreated  TaskAssignment[] @relation("TaskAssignmentCreatedBy")
@@ -130,6 +131,22 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+model PasswordResetCode {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codeHash String @map("code_hash")
+
+  userId String @map("user_id") @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  attempts  Int      @default(0)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@map("password_reset_codes")
 }
 
 model TaskAssignment {
