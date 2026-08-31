@@ -18,6 +18,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { FamilyMembersModule } from './modules/family-members/family-members.module';
+import { HealthController } from './modules/health/health.controller';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { FamilyMembersModule } from './modules/family-members/family-members.mod
     CatalogModule,
     FamilyMembersModule,
   ],
+  controllers: [HealthController],
   providers: [
     {
       provide: APP_FILTER,
