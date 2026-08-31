@@ -18,13 +18,19 @@ import {
 } from '../../common/utils/user-credentials';
 import { toFamilyResponse } from '../families/family.mapper';
 import { ERole } from '../../types/user';
+import { EmailService } from '../email/email.service';
 
 import {
+  PASSWORD_RESET_CODE_EXPIRES_IN_MINUTES,
+  PASSWORD_RESET_CODE_LENGTH,
+  PASSWORD_RESET_MAX_ATTEMPTS,
   REFRESH_TOKEN_BYTES,
   REFRESH_TOKEN_EXPIRES_IN_DAYS,
 } from './auth.constants';
 
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SignupFamilyDto } from './dto/signup-family.dto';
 
 @Injectable()
@@ -32,6 +38,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly emailService: EmailService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -370,6 +377,154 @@ export class AuthService {
     };
   }
 
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const email = dto.email.trim().toLowerCase();
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      include: {
+        familyMembers: true,
+      },
+    });
+
+    const isAdminOwner = user?.familyMembers.some(
+      member =>
+        member.isOwner &&
+        member.role === ERole.admin,
+    );
+
+    if (!user || !isAdminOwner) {
+      return {
+        success: true,
+      };
+    }
+
+    await this.prisma.passwordResetCode.deleteMany({
+      where: { userId: user.id },
+    });
+
+    const code = this.generatePasswordResetCode();
+    const codeHash = await argon2.hash(code);
+
+    const expiresAt = new Date();
+    expiresAt.setMinutes(
+      expiresAt.getMinutes() +
+        PASSWORD_RESET_CODE_EXPIRES_IN_MINUTES,
+    );
+
+    await this.prisma.passwordResetCode.create({
+      data: {
+        userId: user.id,
+        codeHash,
+        expiresAt,
+      },
+    });
+
+    await this.emailService.sendPasswordResetCode(
+      email,
+      code,
+    );
+
+    return {
+      success: true,
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const email = dto.email.trim().toLowerCase();
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new AppException(
+        ErrorCode.PASSWORD_RESET_INVALID_CODE,
+        'Invalid or expired reset code',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const resetCode =
+      await this.prisma.passwordResetCode.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+      });
+
+    if (!resetCode) {
+      throw new AppException(
+        ErrorCode.PASSWORD_RESET_INVALID_CODE,
+        'Invalid or expired reset code',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (resetCode.expiresAt <= new Date()) {
+      await this.prisma.passwordResetCode.delete({
+        where: { id: resetCode.id },
+      });
+
+      throw new AppException(
+        ErrorCode.PASSWORD_RESET_CODE_EXPIRED,
+        'Reset code has expired',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (resetCode.attempts >= PASSWORD_RESET_MAX_ATTEMPTS) {
+      throw new AppException(
+        ErrorCode.PASSWORD_RESET_TOO_MANY_ATTEMPTS,
+        'Too many invalid attempts',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const validCode = await argon2.verify(
+      resetCode.codeHash,
+      dto.code,
+    );
+
+    if (!validCode) {
+      await this.prisma.passwordResetCode.update({
+        where: { id: resetCode.id },
+        data: {
+          attempts: resetCode.attempts + 1,
+        },
+      });
+
+      throw new AppException(
+        ErrorCode.PASSWORD_RESET_INVALID_CODE,
+        'Invalid or expired reset code',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const passwordHash = await argon2.hash(dto.newPin);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash },
+      }),
+      this.prisma.passwordResetCode.deleteMany({
+        where: { userId: user.id },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: {
+          userId: user.id,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+    };
+  }
+
   private async createAccessToken(
     userId: string,
     username: string | null,
@@ -386,6 +541,14 @@ export class AuthService {
     return crypto
       .randomBytes(REFRESH_TOKEN_BYTES)
       .toString('base64url');
+  }
+
+  private generatePasswordResetCode(): string {
+    const max = 10 ** PASSWORD_RESET_CODE_LENGTH;
+    const code = crypto.randomInt(0, max);
+    return code
+      .toString()
+      .padStart(PASSWORD_RESET_CODE_LENGTH, '0');
   }
 
   private hashRefreshToken(token: string): string {
