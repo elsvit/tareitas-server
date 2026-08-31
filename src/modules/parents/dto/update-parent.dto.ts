@@ -1,5 +1,4 @@
 import {
-  IsEnum,
   IsOptional,
   IsString,
   Matches,
@@ -8,7 +7,6 @@ import {
 } from 'class-validator';
 
 import { RequestLangDto } from '../../../common/dto/request-lang.dto';
-import { EFamilyRole } from '../../../types/user';
 
 export class UpdateParentDto extends RequestLangDto {
   @IsOptional()
@@ -29,8 +27,9 @@ export class UpdateParentDto extends RequestLangDto {
   pin?: string;
 
   @IsOptional()
-  @IsEnum(EFamilyRole)
-  familyRole?: EFamilyRole;
+  @IsString()
+  @MaxLength(30)
+  familyRole?: string;
 
   @IsOptional()
   @IsString()

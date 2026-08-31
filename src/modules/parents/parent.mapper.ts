@@ -1,7 +1,7 @@
 import { ParentProfile } from '../../generated/prisma/client';
 import { requireUsername } from '../../common/utils/user-credentials';
 import { IParent } from '../../types/parent';
-import { EFamilyRole, ERole } from '../../types/user';
+import { ERole } from '../../types/user';
 
 export function toParent(
   profile: ParentProfile,
@@ -23,9 +23,7 @@ export function toParent(
     username: requireUsername(username),
     color: profile.color ?? undefined,
     avatar: profile.avatar ?? undefined,
-    familyRole:
-      (member.familyRole as EFamilyRole | null) ??
-      undefined,
+    familyRole: member.familyRole ?? undefined,
     role,
   };
 }

@@ -107,6 +107,20 @@ export class FamilyMembersService {
           },
         });
 
+      if (dto.familyRole !== undefined) {
+        await this.prisma.familyMember.update({
+          where: {
+            familyId_userId: {
+              familyId,
+              userId,
+            },
+          },
+          data: {
+            familyRole: dto.familyRole,
+          },
+        });
+      }
+
       const isAdmin =
         member.isOwner &&
         member.role === ERole.admin;
@@ -117,6 +131,10 @@ export class FamilyMembersService {
         name: profile.name,
         color: profile.color ?? undefined,
         avatar: profile.avatar ?? undefined,
+        familyRole:
+          dto.familyRole ??
+          member.familyRole ??
+          undefined,
       };
     }
 
