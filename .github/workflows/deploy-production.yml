@@ -1,0 +1,41 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Hetzner
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: 65.109.136.166
+          username: root
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+
+            cd /var/www/tareitas-server
+
+            echo "Pulling latest main..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "Installing dependencies..."
+            yarn install --frozen-lockfile
+
+            echo "Generating Prisma Client..."
+            yarn prisma generate
+
+            echo "Applying database migrations..."
+            yarn prisma migrate deploy
+
+            echo "Building application..."
+            yarn build
+
+            echo "Restarting application..."
+            pm2 restart tareitas-server
+
+            echo "Deployment complete!"
