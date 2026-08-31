@@ -20,4 +20,9 @@ export class UpdateMemberProfileDto extends RequestLangDto {
   @IsOptional()
   @IsString()
   avatar?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  familyRole?: string;
 }

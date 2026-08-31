@@ -1,4 +1,4 @@
-import { EFamilyRole, ERole } from './user';
+import { ERole } from './user';
 
 export interface IParent {
   userId: string;
@@ -6,6 +6,6 @@ export interface IParent {
   username: string;
   color?: string;
   avatar?: string;
-  familyRole?: EFamilyRole;
+  familyRole?: string;
   role: ERole.admin | ERole.parent;
 }
