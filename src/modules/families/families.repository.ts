@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 
+import { AppException } from '../../common/errors/app.exception';
+import { ErrorCode } from '../../common/errors/error-code';
 import { PrismaService } from '../../db/prisma.service';
 import { ERole } from '../../types/user';
 import { ParentProfileInputDto } from '../parent-profiles/dto/parent-profile-input.dto';
@@ -38,6 +40,7 @@ export class FamiliesRepository {
         id: familyId,
       },
       include: {
+        subscription: true,
         members: {
           include: {
             user: {
@@ -72,6 +75,7 @@ export class FamiliesRepository {
         },
       },
       include: {
+        subscription: true,
         members: {
           include: {
             user: {
@@ -98,9 +102,23 @@ export class FamiliesRepository {
     parentProfile?: ParentProfileInputDto,
   ) {
     return this.prisma.$transaction(async (tx) => {
+      const existingOwnedFamily = await tx.family.findUnique({
+        where: { ownerUserId: userId },
+        select: { id: true },
+      });
+
+      if (existingOwnedFamily) {
+        throw new AppException(
+          ErrorCode.ADMIN_ALREADY_OWNS_FAMILY,
+          'This admin account already owns a family',
+          HttpStatus.CONFLICT,
+        );
+      }
+
       const family = await tx.family.create({
         data: {
           name,
+          ownerUserId: userId,
         },
       });
 

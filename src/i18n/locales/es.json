@@ -4,6 +4,7 @@
   "NOT_FOUND": "Recurso no encontrado.",
   "FORBIDDEN": "No tienes permiso para realizar esta acción.",
   "USER_ALREADY_EXISTS": "Este correo o nombre de usuario ya está en uso.",
+  "ADMIN_ALREADY_OWNS_FAMILY": "Esta cuenta de administrador ya tiene una familia.",
   "USER_NOT_FOUND": "Usuario no encontrado.",
   "INVALID_CREDENTIALS": "Credenciales no válidas. Revisa tus datos e inténtalo de nuevo.",
   "INVALID_PIN": "PIN no válido.",
