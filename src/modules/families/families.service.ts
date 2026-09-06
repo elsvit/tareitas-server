@@ -9,12 +9,15 @@ import { ParentProfileInputDto } from '../parent-profiles/dto/parent-profile-inp
 import { toFamilyResponse } from './family.mapper';
 import { FamiliesRepository } from './families.repository';
 import { parseEarnedRewardPeriods } from './earned-reward-period.mapper';
+import { findNewlyApprovedPeriods } from './earned-reward-period.utils';
 import { PutEarnedRewardPeriodsDto } from './dto/earned-reward-periods.dto';
+import { PeriodMediaCleanupService } from './period-media-cleanup.service';
 
 @Injectable()
 export class FamiliesService {
   constructor(
     private readonly familiesRepository: FamiliesRepository,
+    private readonly periodMediaCleanupService: PeriodMediaCleanupService,
   ) {}
 
   /**
@@ -105,11 +108,42 @@ export class FamiliesService {
     familyId: string,
     dto: PutEarnedRewardPeriodsDto,
   ) {
+    const existingFamily =
+      await this.familiesRepository.getEarnedRewardPeriods(
+        familyId,
+      );
+
+    if (!existingFamily) {
+      throw new AppException(
+        ErrorCode.FAMILY_NOT_FOUND,
+        'Family not found',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const previousPeriods = parseEarnedRewardPeriods(
+      existingFamily.earnedRewardPeriods,
+    );
+    const nextPeriods = parseEarnedRewardPeriods(
+      dto.periods,
+    );
+    const newlyApproved = findNewlyApprovedPeriods(
+      previousPeriods,
+      nextPeriods,
+    );
+
     const family =
       await this.familiesRepository.updateEarnedRewardPeriods(
         familyId,
         dto.periods,
       );
+
+    if (newlyApproved.length > 0) {
+      await this.periodMediaCleanupService.cleanupForNewlyApprovedPeriods(
+        familyId,
+        newlyApproved,
+      );
+    }
 
     return {
       periods: parseEarnedRewardPeriods(

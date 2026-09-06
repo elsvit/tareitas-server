@@ -1,4 +1,8 @@
-export type EFamilyImageKind = 'task' | 'reward' | 'user';
+export type EFamilyImageKind =
+  | 'task'
+  | 'reward'
+  | 'user'
+  | 'task_record';
 
 export interface IFamilyImage {
   id: string;
@@ -13,6 +17,7 @@ export const FAMILY_IMAGE_KINDS: EFamilyImageKind[] = [
   'task',
   'reward',
   'user',
+  'task_record',
 ];
 
 export function isFamilyImageKind(

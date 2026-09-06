@@ -10,5 +10,6 @@ import { UploadsService } from './uploads.service';
   imports: [AuthModule, CommonModule],
   controllers: [UploadsController],
   providers: [UploadsService],
+  exports: [UploadsService],
 })
 export class UploadsModule {}

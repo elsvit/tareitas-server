@@ -17,20 +17,41 @@ import {
 
 import { UploadedImageFile } from './uploads.types';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_AUDIO_FILE_SIZE = 10 * 1024 * 1024;
 
-const ALLOWED_MIME_TYPES = new Set([
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/jpeg',
   'image/png',
   'image/webp',
   'image/gif',
 ]);
 
-const MIME_EXTENSION: Record<string, string> = {
+const ALLOWED_AUDIO_MIME_TYPES = new Set([
+  'audio/m4a',
+  'audio/mp4',
+  'audio/aac',
+  'audio/x-m4a',
+  'audio/3gpp',
+  'audio/amr',
+  'audio/mpeg',
+]);
+
+const IMAGE_MIME_EXTENSION: Record<string, string> = {
   'image/jpeg': '.jpg',
   'image/png': '.png',
   'image/webp': '.webp',
   'image/gif': '.gif',
+};
+
+const AUDIO_MIME_EXTENSION: Record<string, string> = {
+  'audio/m4a': '.m4a',
+  'audio/mp4': '.m4a',
+  'audio/aac': '.aac',
+  'audio/x-m4a': '.m4a',
+  'audio/3gpp': '.3gp',
+  'audio/amr': '.amr',
+  'audio/mpeg': '.mp3',
 };
 
 @Injectable()
@@ -55,19 +76,28 @@ export class UploadsService {
       );
     }
 
-    if (file.size > MAX_FILE_SIZE) {
+    const isImage = ALLOWED_IMAGE_MIME_TYPES.has(
+      file.mimetype,
+    );
+    const isAudio = ALLOWED_AUDIO_MIME_TYPES.has(
+      file.mimetype,
+    );
+
+    if (!isImage && !isAudio) {
       throw new AppException(
-        ErrorCode.VALIDATION_FILE_TOO_LARGE,
+        ErrorCode.VALIDATION_FILE_TYPE_NOT_ALLOWED,
         '',
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    if (
-      !ALLOWED_MIME_TYPES.has(file.mimetype)
-    ) {
+    const maxSize = isAudio
+      ? MAX_AUDIO_FILE_SIZE
+      : MAX_IMAGE_FILE_SIZE;
+
+    if (file.size > maxSize) {
       throw new AppException(
-        ErrorCode.VALIDATION_FILE_TYPE_NOT_ALLOWED,
+        ErrorCode.VALIDATION_FILE_TOO_LARGE,
         '',
         HttpStatus.BAD_REQUEST,
       );
@@ -83,9 +113,10 @@ export class UploadsService {
     this.validateFile(file);
 
     const extension =
-      MIME_EXTENSION[file.mimetype] ??
+      IMAGE_MIME_EXTENSION[file.mimetype] ??
+      AUDIO_MIME_EXTENSION[file.mimetype] ??
       (extname(file.originalname).toLowerCase() ||
-        '.jpg');
+        '.bin');
 
     const filename = `${randomUUID()}${extension}`;
     const familyDir = join(
@@ -154,7 +185,7 @@ export class UploadsService {
       );
     }
 
-    const inUse = await this.isImagePathInUse(
+    const inUse = await this.isMediaPathInUse(
       familyId,
       path,
     );
@@ -204,6 +235,104 @@ export class UploadsService {
       },
       update: {},
     });
+  }
+
+  async deleteMediaFileIfExists(
+    familyId: string,
+    path: string,
+  ) {
+    if (!path.startsWith(`/uploads/${familyId}/`)) {
+      return;
+    }
+
+    const inUse = await this.isMediaPathInUse(
+      familyId,
+      path,
+    );
+
+    if (inUse) {
+      return;
+    }
+
+    const relativePath = path.replace(
+      /^\/uploads\//,
+      '',
+    );
+    const absolutePath = join(
+      this.uploadsRoot,
+      relativePath,
+    );
+
+    await unlink(absolutePath).catch(() => undefined);
+
+    await this.prisma.familyImage.deleteMany({
+      where: { familyId, path },
+    });
+  }
+
+  private assignmentChangesContainPath(
+    changes: unknown,
+    path: string,
+  ): boolean {
+    if (
+      !changes ||
+      typeof changes !== 'object' ||
+      Array.isArray(changes)
+    ) {
+      return false;
+    }
+
+    for (const change of Object.values(changes)) {
+      if (
+        !change ||
+        typeof change !== 'object' ||
+        Array.isArray(change)
+      ) {
+        continue;
+      }
+
+      const record = change as Record<string, unknown>;
+
+      if (
+        record.picture === path ||
+        record.audioRecord === path
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private async isMediaPathInUse(
+    familyId: string,
+    path: string,
+  ): Promise<boolean> {
+    const assignments =
+      await this.prisma.taskAssignment.findMany({
+        where: { familyId },
+        select: {
+          picture: true,
+          changes: true,
+        },
+      });
+
+    for (const assignment of assignments) {
+      if (assignment.picture === path) {
+        return true;
+      }
+
+      if (
+        this.assignmentChangesContainPath(
+          assignment.changes,
+          path,
+        )
+      ) {
+        return true;
+      }
+    }
+
+    return this.isImagePathInUse(familyId, path);
   }
 
   private async isImagePathInUse(
