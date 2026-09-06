@@ -23,6 +23,13 @@ type RevenueCatWebhookEvent = {
 
 const DEFAULT_ENTITLEMENT_ID = 'tareitas_pro';
 
+const FAMILY_ID_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isFamilyUuid(value: string): boolean {
+  return FAMILY_ID_UUID_RE.test(value);
+}
+
 @Injectable()
 export class RevenueCatService {
   private readonly logger = new Logger(
@@ -42,7 +49,8 @@ export class RevenueCatService {
 
     if (
       event.type === 'SUBSCRIBER_ALIAS' ||
-      event.type === 'TRANSFER'
+      event.type === 'TRANSFER' ||
+      event.type === 'TEST'
     ) {
       return {
         success: true,
@@ -56,6 +64,14 @@ export class RevenueCatService {
     if (!familyId) {
       this.logger.warn(
         'RevenueCat webhook missing app_user_id',
+      );
+
+      return { success: true, ignored: true };
+    }
+
+    if (!isFamilyUuid(familyId)) {
+      this.logger.warn(
+        `RevenueCat webhook ignored invalid family app_user_id ${familyId}`,
       );
 
       return { success: true, ignored: true };
@@ -157,8 +173,6 @@ export class RevenueCatService {
         return 'EXPIRED';
       case 'SUBSCRIPTION_PAUSED':
         return 'PAUSED';
-      case 'TEST':
-        return 'ACTIVE';
       default:
         return 'ACTIVE';
     }
