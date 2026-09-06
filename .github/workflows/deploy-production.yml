@@ -36,6 +36,6 @@ jobs:
             yarn build
 
             echo "Restarting application..."
-            pm2 restart tareitas-server
+            pm2 restart tareitas-server --update-env
 
             echo "Deployment complete!"
