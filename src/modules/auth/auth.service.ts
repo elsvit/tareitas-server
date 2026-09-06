@@ -175,6 +175,7 @@ export class AuthService {
           const createdFamily = await tx.family.create({
             data: {
               name: dto.familyName,
+              ownerUserId: adminUser.id,
             },
           });
 
@@ -223,6 +224,7 @@ export class AuthService {
           return tx.family.findUnique({
             where: { id: createdFamily.id },
             include: {
+              subscription: true,
               members: {
                 include: {
                   user: {

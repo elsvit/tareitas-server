@@ -2,6 +2,7 @@ import {
   ChildProfile,
   Family,
   FamilyMember,
+  FamilySubscription,
   ParentProfile,
   User,
 } from '../../generated/prisma/client';
@@ -10,6 +11,7 @@ import {
   requireAdminEmail,
   requireUsername,
 } from '../../common/utils/user-credentials';
+import { toFamilySubscriptionResponse } from '../subscriptions/subscription.mapper';
 
 type FamilyMemberWithUser = FamilyMember & {
   user: User & {
@@ -20,6 +22,7 @@ type FamilyMemberWithUser = FamilyMember & {
 
 type FamilyWithMembers = Family & {
   members: FamilyMemberWithUser[];
+  subscription?: FamilySubscription | null;
 };
 
 export function toFamilyResponse(
@@ -40,6 +43,9 @@ export function toFamilyResponse(
   return {
     id: family.id,
     name: family.name,
+    subscription: toFamilySubscriptionResponse(
+      family.subscription,
+    ),
     parents,
     children,
   };

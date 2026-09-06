@@ -29,6 +29,7 @@ model User {
   rewardRedemptions   RewardRedemption[] @relation("RewardRedemptionChild")
   notifications       Notification[]
   familyImagesUploaded FamilyImage[]     @relation("FamilyImageUploadedBy")
+  ownedFamily          Family?            @relation("FamilyOwner")
 
   @@map("users")
 }
@@ -36,6 +37,7 @@ model User {
 model Family {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name      String   @db.VarChar(100)
+  ownerUserId String @unique @map("owner_user_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
@@ -45,7 +47,10 @@ model Family {
   bundledRewardCatalogVersion Int @default(0) @map("bundled_reward_catalog_version")
   earnedRewardPeriods         Json @default("[]") @map("earned_reward_periods")
 
+  owner       User               @relation("FamilyOwner", fields: [ownerUserId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "families_owner_user_fk")
   members     FamilyMember[]
+  subscription FamilySubscription?
+
   taskAssignments TaskAssignment[]
   tasks       Task[]
   rewards            Reward[]
@@ -56,6 +61,7 @@ model Family {
   familyImages    FamilyImage[]
 
   @@map("families")
+  
 }
 
 model FamilyMember {
@@ -91,6 +97,33 @@ model FamilyImage {
   @@unique([familyId, path], map: "family_images_family_path_unique")
   @@index([familyId])
   @@map("family_images")
+}
+
+model FamilySubscription {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  familyId String @unique @map("family_id") @db.Uuid
+
+  entitlementId String  @map("entitlement_id") @db.VarChar(100)
+  productId     String? @map("product_id") @db.VarChar(255)
+  store         String? @db.VarChar(50)
+
+  status    String  @db.VarChar(30)
+  willRenew Boolean @default(false) @map("will_renew")
+
+  purchasedAt DateTime? @map("purchased_at") @db.Timestamptz(6)
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz(6)
+
+  revenueCatAppUserId String @unique @map("revenuecat_app_user_id") @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "family_subscriptions_family_fk")
+
+  @@index([status])
+  @@index([expiresAt])
+  @@map("family_subscriptions")
 }
 
 model ParentProfile {
