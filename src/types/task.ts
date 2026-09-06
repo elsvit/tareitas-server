@@ -23,6 +23,7 @@ export interface ITaskAssignmentChange {
   description?: string;
   reward?: number;
   picture?: string;
+  audioRecord?: string;
   newTaskBonus?: number;
   newTaskDuration?: number;
   excluded?: boolean;
