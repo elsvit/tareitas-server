@@ -18,7 +18,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { FamilyMembersModule } from './modules/family-members/family-members.module';
-import { RevenueCatModule } from './modules/revenuecat/revenuecat.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { HealthController } from './modules/health/health.controller';
 
 @Module({
@@ -40,7 +40,7 @@ import { HealthController } from './modules/health/health.controller';
     UploadsModule,
     CatalogModule,
     FamilyMembersModule,
-    RevenueCatModule,
+    WebhooksModule,
   ],
   controllers: [HealthController],
   providers: [
