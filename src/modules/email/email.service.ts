@@ -25,7 +25,19 @@ export class EmailService {
   }
 
   private normalizeFromEmail(value: string): string {
-    const trimmed = value.trim();
+    let trimmed = value.trim();
+
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"'))
+      || (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      trimmed = trimmed.slice(1, -1).trim();
+    }
+
+    trimmed = trimmed.replace(
+      /^(.+?)\s+"<([^>]+)>"/,
+      '$1 <$2>',
+    );
 
     if (/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(trimmed)) {
       return trimmed;
@@ -38,7 +50,7 @@ export class EmailService {
     }
 
     this.logger.error(
-      `Invalid RESEND_FROM_EMAIL "${trimmed}". Use noreply@yourdomain.com or Name <noreply@yourdomain.com>`,
+      `Invalid RESEND_FROM_EMAIL "${value}". Use noreply@yourdomain.com or Name <noreply@yourdomain.com>`,
     );
 
     return trimmed;
