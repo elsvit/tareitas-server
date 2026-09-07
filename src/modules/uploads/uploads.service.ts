@@ -15,6 +15,15 @@ import {
   isFamilyImageKind,
 } from '../../types/family-image';
 
+import {
+  assertObjectStoragePathForFamily,
+  buildObjectStorageKey,
+  extensionForContentType,
+  isFamilyMediaPath,
+  isLegacyUploadPath,
+  isObjectStoragePath,
+} from './media-path.utils';
+import { ObjectStorageService } from './object-storage.service';
 import { UploadedImageFile } from './uploads.types';
 
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
@@ -63,7 +72,12 @@ export class UploadsService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly objectStorage: ObjectStorageService,
   ) {}
+
+  isObjectStorageEnabled(): boolean {
+    return this.objectStorage.isEnabled();
+  }
 
   validateFile(
     file: UploadedImageFile | undefined,
@@ -76,32 +90,173 @@ export class UploadsService {
       );
     }
 
-    const isImage = ALLOWED_IMAGE_MIME_TYPES.has(
+    this.validateMimeAndSize(
       file.mimetype,
+      file.size,
     );
-    const isAudio = ALLOWED_AUDIO_MIME_TYPES.has(
-      file.mimetype,
+  }
+
+  validatePresignRequest(
+    kind: EFamilyImageKind,
+    contentType: string,
+    contentLength: number,
+  ) {
+    this.validateMimeAndSize(
+      contentType,
+      contentLength,
+      kind,
+    );
+  }
+
+  async createPresignedUpload(
+    familyId: string,
+    kind: EFamilyImageKind,
+    contentType: string,
+    contentLength: number,
+  ) {
+    if (!this.objectStorage.isEnabled()) {
+      throw new AppException(
+        ErrorCode.NOT_FOUND,
+        'Object storage is not configured',
+        HttpStatus.NOT_IMPLEMENTED,
+      );
+    }
+
+    this.validatePresignRequest(
+      kind,
+      contentType,
+      contentLength,
     );
 
-    if (!isImage && !isAudio) {
+    const extension =
+      extensionForContentType(contentType, kind) ??
+      '.bin';
+    const path = buildObjectStorageKey(
+      familyId,
+      kind,
+      extension,
+    );
+    const uploadUrl =
+      await this.objectStorage.createPresignedUploadUrl(
+        path,
+        contentType,
+        contentLength,
+      );
+
+    return {
+      uploadUrl,
+      path,
+      expiresIn:
+        this.objectStorage.getPresignExpirySeconds(),
+    };
+  }
+
+  async confirmObjectStorageUpload(
+    familyId: string,
+    path: string,
+    kind: EFamilyImageKind,
+    uploadedByUserId: string,
+  ) {
+    if (!this.objectStorage.isEnabled()) {
       throw new AppException(
-        ErrorCode.VALIDATION_FILE_TYPE_NOT_ALLOWED,
-        '',
+        ErrorCode.NOT_FOUND,
+        'Object storage is not configured',
+        HttpStatus.NOT_IMPLEMENTED,
+      );
+    }
+
+    try {
+      assertObjectStoragePathForFamily(
+        familyId,
+        path,
+        kind,
+      );
+    } catch {
+      throw new AppException(
+        ErrorCode.VALIDATION_INVALID,
+        'Invalid upload path',
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    const maxSize = isAudio
-      ? MAX_AUDIO_FILE_SIZE
-      : MAX_IMAGE_FILE_SIZE;
+    const exists =
+      await this.objectStorage.objectExists(path);
 
-    if (file.size > maxSize) {
+    if (!exists) {
       throw new AppException(
-        ErrorCode.VALIDATION_FILE_TOO_LARGE,
-        '',
+        ErrorCode.FAMILY_IMAGE_NOT_FOUND,
+        'Uploaded file not found',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    await this.registerFamilyImage(
+      familyId,
+      path,
+      kind,
+      uploadedByUserId,
+    );
+
+    const url = await this.resolveMediaUrl(path);
+
+    return { path, url };
+  }
+
+  async getMediaAccessUrl(
+    familyId: string,
+    path: string,
+  ) {
+    if (!isFamilyMediaPath(familyId, path)) {
+      throw new AppException(
+        ErrorCode.VALIDATION_INVALID,
+        'Invalid media path',
         HttpStatus.BAD_REQUEST,
       );
     }
+
+    if (isLegacyUploadPath(path)) {
+      return {
+        url: path,
+        expiresIn: null,
+        legacy: true,
+      };
+    }
+
+    if (!this.objectStorage.isEnabled()) {
+      throw new AppException(
+        ErrorCode.NOT_FOUND,
+        'Object storage is not configured',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const url =
+      await this.objectStorage.createPresignedReadUrl(
+        path,
+      );
+
+    return {
+      url,
+      expiresIn:
+        this.objectStorage.getPresignExpirySeconds(),
+      legacy: false,
+    };
+  }
+
+  async resolveMediaUrl(
+    path: string,
+  ): Promise<string | null> {
+    if (isObjectStoragePath(path)) {
+      if (!this.objectStorage.isEnabled()) {
+        return null;
+      }
+
+      return this.objectStorage.createPresignedReadUrl(
+        path,
+      );
+    }
+
+    return null;
   }
 
   async saveFamilyImage(
@@ -147,25 +302,36 @@ export class UploadsService {
 
   async listFamilyImages(
     familyId: string,
-  ): Promise<{ images: IFamilyImage[] }> {
+  ): Promise<{
+    images: Array<IFamilyImage & { url?: string }>;
+  }> {
     const images =
       await this.prisma.familyImage.findMany({
         where: { familyId },
         orderBy: { createdAt: 'desc' },
       });
 
-    return {
-      images: images.map(image => ({
-        id: image.id,
-        familyId: image.familyId,
-        path: image.path,
-        kind: image.kind as EFamilyImageKind,
-        uploadedByUserId:
-          image.uploadedByUserId,
-        createdAt:
-          image.createdAt.toISOString(),
-      })),
-    };
+    const mapped = await Promise.all(
+      images.map(async image => {
+        const url =
+          (await this.resolveMediaUrl(image.path)) ??
+          undefined;
+
+        return {
+          id: image.id,
+          familyId: image.familyId,
+          path: image.path,
+          kind: image.kind as EFamilyImageKind,
+          uploadedByUserId:
+            image.uploadedByUserId,
+          createdAt:
+            image.createdAt.toISOString(),
+          url,
+        };
+      }),
+    );
+
+    return { images: mapped };
   }
 
   async deleteFamilyImage(
@@ -198,16 +364,7 @@ export class UploadsService {
       );
     }
 
-    const relativePath = path.replace(
-      /^\/uploads\//,
-      '',
-    );
-    const absolutePath = join(
-      this.uploadsRoot,
-      relativePath,
-    );
-
-    await unlink(absolutePath).catch(() => undefined);
+    await this.deleteStoredFile(familyId, path);
 
     await this.prisma.familyImage.delete({
       where: { id: image.id },
@@ -241,7 +398,7 @@ export class UploadsService {
     familyId: string,
     path: string,
   ) {
-    if (!path.startsWith(`/uploads/${familyId}/`)) {
+    if (!isFamilyMediaPath(familyId, path)) {
       return;
     }
 
@@ -251,6 +408,85 @@ export class UploadsService {
     );
 
     if (inUse) {
+      return;
+    }
+
+    await this.deleteStoredFile(familyId, path);
+
+    await this.prisma.familyImage.deleteMany({
+      where: { familyId, path },
+    });
+  }
+
+  private validateMimeAndSize(
+    mimeType: string,
+    size: number,
+    kind?: EFamilyImageKind,
+  ) {
+    const isAudioRequest = kind === 'task_record';
+    const isImage = ALLOWED_IMAGE_MIME_TYPES.has(
+      mimeType,
+    );
+    const isAudio = ALLOWED_AUDIO_MIME_TYPES.has(
+      mimeType,
+    );
+
+    if (isAudioRequest && !isAudio) {
+      throw new AppException(
+        ErrorCode.VALIDATION_FILE_TYPE_NOT_ALLOWED,
+        '',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (
+      !isAudioRequest &&
+      kind &&
+      !isImage
+    ) {
+      throw new AppException(
+        ErrorCode.VALIDATION_FILE_TYPE_NOT_ALLOWED,
+        '',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (!isImage && !isAudio) {
+      throw new AppException(
+        ErrorCode.VALIDATION_FILE_TYPE_NOT_ALLOWED,
+        '',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const maxSize = isAudio
+      ? MAX_AUDIO_FILE_SIZE
+      : MAX_IMAGE_FILE_SIZE;
+
+    if (size > maxSize) {
+      throw new AppException(
+        ErrorCode.VALIDATION_FILE_TOO_LARGE,
+        '',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  private async deleteStoredFile(
+    familyId: string,
+    path: string,
+  ) {
+    if (isObjectStoragePath(path)) {
+      if (this.objectStorage.isEnabled()) {
+        await this.objectStorage
+          .deleteObject(path)
+          .catch(() => undefined);
+      }
+
+      return;
+    }
+
+    if (!path.startsWith(`/uploads/${familyId}/`)) {
       return;
     }
 
@@ -264,10 +500,6 @@ export class UploadsService {
     );
 
     await unlink(absolutePath).catch(() => undefined);
-
-    await this.prisma.familyImage.deleteMany({
-      where: { familyId, path },
-    });
   }
 
   private assignmentChangesContainPath(

@@ -99,8 +99,4 @@ export function findNewlyApprovedPeriods(
   return newlyApproved;
 }
 
-export function isCustomUploadPath(
-  value?: string | null,
-): value is string {
-  return !!value && value.startsWith('/uploads/');
-}
+export { isCustomUploadPath } from '../uploads/media-path.utils';
