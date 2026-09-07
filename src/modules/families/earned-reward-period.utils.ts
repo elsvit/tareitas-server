@@ -3,6 +3,7 @@ import {
   IEarnedRewardPeriodChildBalance,
   IEarnedRewardPeriods,
 } from '../../types/earned-reward-period';
+import { APPROVED_PERIOD_MEDIA_RETENTION_MONTHS } from '../../constants/support-constants';
 
 export function isEarnedPeriodChildBalance(
   value: unknown,
@@ -34,6 +35,15 @@ export function subtractMonthsFromYearMonth(
   const nextMonth = String(date.getMonth() + 1).padStart(2, '0');
 
   return `${nextYear}-${nextMonth}`;
+}
+
+export function getApprovedPeriodMediaCutoffYearMonth(
+  approvedYearMonth: string,
+): string {
+  return subtractMonthsFromYearMonth(
+    approvedYearMonth,
+    APPROVED_PERIOD_MEDIA_RETENTION_MONTHS,
+  );
 }
 
 export function findNewlyApprovedPeriods(
