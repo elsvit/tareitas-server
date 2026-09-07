@@ -6,9 +6,10 @@ import { ITaskAssignmentChange } from '../../types/task';
 import { UploadsService } from '../uploads/uploads.service';
 
 import {
+  getApprovedPeriodMediaCutoffYearMonth,
   isCustomUploadPath,
-  subtractMonthsFromYearMonth,
 } from './earned-reward-period.utils';
+import { APPROVED_PERIOD_MEDIA_RETENTION_MONTHS } from '../../constants/support-constants';
 
 type AssignmentChanges = Record<string, ITaskAssignmentChange>;
 
@@ -41,9 +42,8 @@ export class PeriodMediaCleanupService {
     childId: string,
     approvedYearMonth: string,
   ) {
-    const cutoffYearMonth = subtractMonthsFromYearMonth(
+    const cutoffYearMonth = getApprovedPeriodMediaCutoffYearMonth(
       approvedYearMonth,
-      3,
     );
 
     const assignments =
@@ -121,7 +121,7 @@ export class PeriodMediaCleanupService {
     }
 
     this.logger.log(
-      `Cleaned task media for family ${familyId}, child ${childId}, approved ${approvedYearMonth} (cutoff ${cutoffYearMonth})`,
+      `Cleaned task media for family ${familyId}, child ${childId}, approved ${approvedYearMonth} (cutoff ${cutoffYearMonth}, retention ${APPROVED_PERIOD_MEDIA_RETENTION_MONTHS} months)`,
     );
   }
 }
