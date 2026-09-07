@@ -134,14 +134,22 @@ export class UploadsController {
         dto.kind,
       );
 
-    return saved.then((result) => {
-      const host =
-        req.get('host') ?? 'localhost:3000';
-      const protocol = req.protocol;
+    return saved.then(async (result) => {
+      const url =
+        (await this.uploadsService.resolveMediaUrl(
+          result.path,
+        )) ??
+        (() => {
+          const host =
+            req.get('host') ?? 'localhost:3000';
+          const protocol = req.protocol;
+
+          return `${protocol}://${host}${result.path}`;
+        })();
 
       return {
         path: result.path,
-        url: `${protocol}://${host}${result.path}`,
+        url,
       };
     });
   }
