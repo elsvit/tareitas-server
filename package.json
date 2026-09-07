@@ -7,7 +7,9 @@
     "dev": "nest start --watch",
     "build": "prisma generate && nest build",
     "start": "node dist/main.js",
-    "wipe-media": "tsx scripts/wipe-family-media.ts"
+    "wipe-media": "tsx scripts/wipe-family-media.ts",
+    "wipe-db-data": "tsx scripts/wipe-database-data.ts",
+    "wipe-all-data": "tsx scripts/wipe-all-data.ts"
   },
   "keywords": [],
   "author": "",
