@@ -12,17 +12,25 @@ import { AppModule } from './app.module';
 import { AppException } from './common/errors/app.exception';
 import { ErrorCode } from './common/errors/error-code';
 import { flattenValidationErrors } from './common/errors/field-error';
+import {
+  isProduction,
+  validateProductionObjectStorage,
+} from './config/object-storage.config';
 
 async function bootstrap() {
+  validateProductionObjectStorage();
+
   const app =
     await NestFactory.create<NestExpressApplication>(
       AppModule,
     );
 
-  app.useStaticAssets(
-    join(process.cwd(), 'uploads'),
-    { prefix: '/uploads/' },
-  );
+  if (!isProduction()) {
+    app.useStaticAssets(
+      join(process.cwd(), 'uploads'),
+      { prefix: '/uploads/' },
+    );
+  }
 
   app.useGlobalPipes(
     new ValidationPipe({

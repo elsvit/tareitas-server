@@ -25,6 +25,7 @@ import {
 } from './media-path.utils';
 import { ObjectStorageService } from './object-storage.service';
 import { UploadedImageFile } from './uploads.types';
+import { isProduction } from '../../config/object-storage.config';
 
 const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_AUDIO_FILE_SIZE = 10 * 1024 * 1024;
@@ -77,6 +78,16 @@ export class UploadsService {
 
   isObjectStorageEnabled(): boolean {
     return this.objectStorage.isEnabled();
+  }
+
+  private assertDiskUploadAllowed(): void {
+    if (isProduction()) {
+      throw new AppException(
+        ErrorCode.NOT_FOUND,
+        'Disk uploads are disabled in production; configure object storage',
+        HttpStatus.NOT_IMPLEMENTED,
+      );
+    }
   }
 
   validateFile(
@@ -302,6 +313,8 @@ export class UploadsService {
         filename: path.split('/').pop() ?? path,
       };
     }
+
+    this.assertDiskUploadAllowed();
 
     const filename = `${randomUUID()}${extension}`;
     const familyDir = join(
