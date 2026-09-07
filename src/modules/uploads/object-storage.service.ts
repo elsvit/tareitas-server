@@ -130,6 +130,24 @@ export class ObjectStorageService {
     }
   }
 
+  async putObject(
+    key: string,
+    body: Buffer,
+    contentType: string,
+  ): Promise<void> {
+    this.assertEnabled();
+
+    await this.client!.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+        ContentLength: body.length,
+      }),
+    );
+  }
+
   async deleteObject(key: string): Promise<void> {
     this.assertEnabled();
 

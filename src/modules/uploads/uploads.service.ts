@@ -273,6 +273,36 @@ export class UploadsService {
       (extname(file.originalname).toLowerCase() ||
         '.bin');
 
+    if (
+      kind &&
+      isFamilyImageKind(kind) &&
+      this.objectStorage.isEnabled()
+    ) {
+      const path = buildObjectStorageKey(
+        familyId,
+        kind,
+        extension,
+      );
+
+      await this.objectStorage.putObject(
+        path,
+        file.buffer,
+        file.mimetype,
+      );
+
+      await this.registerFamilyImage(
+        familyId,
+        path,
+        kind,
+        uploadedByUserId,
+      );
+
+      return {
+        path,
+        filename: path.split('/').pop() ?? path,
+      };
+    }
+
     const filename = `${randomUUID()}${extension}`;
     const familyDir = join(
       this.uploadsRoot,
