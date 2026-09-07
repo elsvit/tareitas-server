@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -17,11 +18,14 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { FamilyMemberGuard } from '../../common/guards/family-member.guard';
 import { ERole } from '../../types/user';
+import { EFamilyImageKind } from '../../types/family-image';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtPayload } from '../auth/types/jwt-payload';
 
 import {
+  ConfirmUploadDto,
   DeleteFamilyImageDto,
+  PresignUploadDto,
   UploadFamilyImageDto,
 } from './dto/family-image.dto';
 import { UploadsService } from './uploads.service';
@@ -43,6 +47,33 @@ export class UploadsController {
     );
   }
 
+  @Get('access-url')
+  getAccessUrl(
+    @Param('familyId') familyId: string,
+    @Query('path') path: string,
+    @Req() req: Request,
+  ) {
+    return this.uploadsService
+      .getMediaAccessUrl(familyId, path)
+      .then(result => {
+        if (result.legacy) {
+          const host =
+            req.get('host') ?? 'localhost:3000';
+          const protocol = req.protocol;
+
+          return {
+            url: `${protocol}://${host}${result.url}`,
+            expiresIn: result.expiresIn,
+          };
+        }
+
+        return {
+          url: result.url,
+          expiresIn: result.expiresIn,
+        };
+      });
+  }
+
   @Delete('library')
   @RequireRole(ERole.admin, ERole.parent)
   deleteFromLibrary(
@@ -52,6 +83,33 @@ export class UploadsController {
     return this.uploadsService.deleteFamilyImage(
       familyId,
       dto.path,
+    );
+  }
+
+  @Post('presign')
+  presignUpload(
+    @Param('familyId') familyId: string,
+    @Body() dto: PresignUploadDto,
+  ) {
+    return this.uploadsService.createPresignedUpload(
+      familyId,
+      dto.kind as EFamilyImageKind,
+      dto.contentType,
+      dto.contentLength,
+    );
+  }
+
+  @Post('confirm')
+  confirmUpload(
+    @Param('familyId') familyId: string,
+    @Body() dto: ConfirmUploadDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.uploadsService.confirmObjectStorageUpload(
+      familyId,
+      dto.path,
+      dto.kind as EFamilyImageKind,
+      user.sub,
     );
   }
 
