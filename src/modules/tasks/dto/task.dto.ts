@@ -7,6 +7,14 @@ import {
   IsUUID,
   ValidateNested,
 } from 'class-validator';
+
+export class SubtaskCompletionMediaDto {
+  @IsString()
+  url!: string;
+
+  @IsString()
+  subtaskId!: string;
+}
 import { Type } from 'class-transformer';
 
 import { ETaskStatus } from '../../../types/task';
@@ -31,6 +39,18 @@ export class CreateTaskDto {
   @IsArray()
   @IsString({ each: true })
   completedSubtasks?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SubtaskCompletionMediaDto)
+  completedAudioRecords?: SubtaskCompletionMediaDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SubtaskCompletionMediaDto)
+  completedPhotos?: SubtaskCompletionMediaDto[];
 }
 
 export class UpdateTaskDto {
@@ -42,6 +62,18 @@ export class UpdateTaskDto {
   @IsArray()
   @IsString({ each: true })
   completedSubtasks?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SubtaskCompletionMediaDto)
+  completedAudioRecords?: SubtaskCompletionMediaDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SubtaskCompletionMediaDto)
+  completedPhotos?: SubtaskCompletionMediaDto[];
 }
 
 export class ListTasksQueryDto {

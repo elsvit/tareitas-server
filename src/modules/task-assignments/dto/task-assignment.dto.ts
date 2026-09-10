@@ -25,6 +25,14 @@ export class SubtaskDto {
   @IsString()
   @IsNotEmpty()
   label!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPhoto?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isAudio?: boolean;
 }
 
 export class TaskAssignmentRepeatDto {

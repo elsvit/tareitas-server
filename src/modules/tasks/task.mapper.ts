@@ -1,12 +1,36 @@
 import { Task } from '../../generated/prisma/client';
-import { ETaskStatus, ITask } from '../../types/task';
+import {
+  ETaskStatus,
+  ISubtaskCompletionMedia,
+  ITask,
+} from '../../types/task';
+
+function parseStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? (value as string[]) : [];
+}
+
+function parseCompletionMedia(
+  value: unknown,
+): ISubtaskCompletionMedia[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(
+    (item): item is ISubtaskCompletionMedia =>
+      !!item &&
+      typeof item === 'object' &&
+      typeof (item as ISubtaskCompletionMedia).url === 'string' &&
+      typeof (item as ISubtaskCompletionMedia).subtaskId === 'string',
+  );
+}
 
 export function toTask(task: Task): ITask {
-  const completedSubtasks = Array.isArray(
-    task.completedSubtasks,
-  )
-    ? (task.completedSubtasks as string[])
-    : [];
+  const completedSubtasks = parseStringArray(task.completedSubtasks);
+  const completedAudioRecords = parseCompletionMedia(
+    task.completedAudioRecords,
+  );
+  const completedPhotos = parseCompletionMedia(task.completedPhotos);
 
   return {
     id: task.id,
@@ -17,6 +41,14 @@ export function toTask(task: Task): ITask {
     completedSubtasks:
       completedSubtasks.length > 0
         ? completedSubtasks
+        : undefined,
+    completedAudioRecords:
+      completedAudioRecords.length > 0
+        ? completedAudioRecords
+        : undefined,
+    completedPhotos:
+      completedPhotos.length > 0
+        ? completedPhotos
         : undefined,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),

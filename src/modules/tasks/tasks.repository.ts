@@ -1,8 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 
 import { PrismaService } from '../../db/prisma.service';
 import { createTaskId } from '../../common/utils/task-id';
-import { ETaskStatus } from '../../types/task';
+import {
+  ETaskStatus,
+  ISubtaskCompletionMedia,
+} from '../../types/task';
 
 @Injectable()
 export class TasksRepository {
@@ -87,6 +91,8 @@ export class TasksRepository {
     date: Date;
     status?: ETaskStatus;
     completedSubtasks?: string[];
+    completedAudioRecords?: ISubtaskCompletionMedia[];
+    completedPhotos?: ISubtaskCompletionMedia[];
   }) {
     return this.prisma.task.create({
       data: {
@@ -102,7 +108,14 @@ export class TasksRepository {
         status:
           data.status ?? ETaskStatus.pending,
         completedSubtasks:
-          data.completedSubtasks ?? [],
+          (data.completedSubtasks ??
+            []) as unknown as Prisma.InputJsonValue,
+        completedAudioRecords:
+          (data.completedAudioRecords ??
+            []) as unknown as Prisma.InputJsonValue,
+        completedPhotos:
+          (data.completedPhotos ??
+            []) as unknown as Prisma.InputJsonValue,
       },
     });
   }
@@ -112,6 +125,8 @@ export class TasksRepository {
     data: {
       status?: ETaskStatus;
       completedSubtasks?: string[];
+      completedAudioRecords?: ISubtaskCompletionMedia[];
+      completedPhotos?: ISubtaskCompletionMedia[];
     },
   ) {
     return this.prisma.task.update({
@@ -119,7 +134,17 @@ export class TasksRepository {
       data: {
         status: data.status,
         completedSubtasks:
-          data.completedSubtasks,
+          data.completedSubtasks as unknown as
+            | Prisma.InputJsonValue
+            | undefined,
+        completedAudioRecords:
+          data.completedAudioRecords as unknown as
+            | Prisma.InputJsonValue
+            | undefined,
+        completedPhotos:
+          data.completedPhotos as unknown as
+            | Prisma.InputJsonValue
+            | undefined,
       },
     });
   }

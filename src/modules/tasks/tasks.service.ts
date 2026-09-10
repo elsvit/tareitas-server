@@ -104,6 +104,10 @@ export class TasksService {
           status: dto.status,
           completedSubtasks:
             dto.completedSubtasks,
+          completedAudioRecords:
+            dto.completedAudioRecords,
+          completedPhotos:
+            dto.completedPhotos,
         });
 
       return toTask(task);
@@ -149,6 +153,10 @@ export class TasksService {
           status: dto.status,
           completedSubtasks:
             dto.completedSubtasks,
+          completedAudioRecords:
+            dto.completedAudioRecords,
+          completedPhotos:
+            dto.completedPhotos,
         },
       );
 
@@ -421,6 +429,10 @@ export class TasksService {
                   status: taskDto.status,
                   completedSubtasks:
                     taskDto.completedSubtasks,
+                  completedAudioRecords:
+                    taskDto.completedAudioRecords,
+                  completedPhotos:
+                    taskDto.completedPhotos,
                 },
               );
             tasks.push(toTask(updated));

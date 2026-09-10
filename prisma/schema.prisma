@@ -231,6 +231,8 @@ model Task {
   status String   @default("pending") @db.VarChar(20)
 
   completedSubtasks Json @default("[]") @map("completed_subtasks")
+  completedAudioRecords Json @default("[]") @map("completed_audio_records")
+  completedPhotos Json @default("[]") @map("completed_photos")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
