@@ -13,17 +13,10 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { SubtaskDto } from '../../../common/dto/subtask.dto';
 import { ECatalogItemSource } from '../../../types/catalog';
 
-export class SubtaskDto {
-  @IsString()
-  @IsNotEmpty()
-  value!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  label!: string;
-}
+export { SubtaskDto };
 
 export class TaskBaseItemDto {
   @IsString()

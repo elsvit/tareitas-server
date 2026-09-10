@@ -6,6 +6,8 @@ export enum ECatalogItemSource {
 export interface ISubtask {
   value: string;
   label: string;
+  isPhoto?: boolean;
+  isAudio?: boolean;
 }
 
 export interface ITaskBase {

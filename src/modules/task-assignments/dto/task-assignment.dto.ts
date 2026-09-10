@@ -15,25 +15,10 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { SubtaskDto } from '../../../common/dto/subtask.dto';
 import { ETaskRepeatType } from '../../../types/task';
 
-export class SubtaskDto {
-  @IsString()
-  @IsNotEmpty()
-  value!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  label!: string;
-
-  @IsOptional()
-  @IsBoolean()
-  isPhoto?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  isAudio?: boolean;
-}
+export { SubtaskDto };
 
 export class TaskAssignmentRepeatDto {
   @IsEnum(ETaskRepeatType)
