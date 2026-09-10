@@ -3,14 +3,17 @@ import {
   Controller,
   Delete,
   Get,
+  HttpStatus,
   Param,
   Post,
   Query,
   Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 
@@ -87,10 +90,20 @@ export class UploadsController {
   }
 
   @Post('presign')
-  presignUpload(
+  async presignUpload(
     @Param('familyId') familyId: string,
     @Body() dto: PresignUploadDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
+    if (!this.uploadsService.isObjectStorageEnabled()) {
+      res.status(HttpStatus.NOT_IMPLEMENTED);
+
+      return {
+        errorCode: 'PRESIGN_NOT_AVAILABLE',
+        errorMessage: 'Object storage is not configured',
+      };
+    }
+
     return this.uploadsService.createPresignedUpload(
       familyId,
       dto.kind as EFamilyImageKind,

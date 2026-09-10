@@ -15,6 +15,13 @@ export enum ETaskRepeatType {
 export interface ISubtask {
   value: string;
   label: string;
+  isPhoto?: boolean;
+  isAudio?: boolean;
+}
+
+export interface ISubtaskCompletionMedia {
+  url: string;
+  subtaskId: string;
 }
 
 export interface ITaskAssignmentChange {
@@ -65,6 +72,8 @@ export interface ITask {
   date: string;
   status: ETaskStatus;
   completedSubtasks?: string[];
+  completedAudioRecords?: ISubtaskCompletionMedia[];
+  completedPhotos?: ISubtaskCompletionMedia[];
   createdAt: string;
   updatedAt: string;
 }
