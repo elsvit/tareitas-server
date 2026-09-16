@@ -32,6 +32,34 @@ async function bootstrap() {
     );
   }
 
+  const productionOrigins = [
+    'https://tareitas.net',
+    'https://www.tareitas.net',
+    'https://tareitas.com',
+    'https://www.tareitas.com',
+  ];
+
+  app.enableCors({
+    origin: isProduction()
+      ? productionOrigins
+      : (origin, callback) => {
+          if (
+            !origin ||
+            productionOrigins.includes(origin) ||
+            /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(
+              origin,
+            )
+          ) {
+            callback(null, true);
+            return;
+          }
+
+          callback(new Error(`CORS blocked for origin: ${origin}`));
+        },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'lang'],
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
