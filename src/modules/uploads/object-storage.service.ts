@@ -1,7 +1,9 @@
 import {
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -157,6 +159,50 @@ export class ObjectStorageService {
         Key: key,
       }),
     );
+  }
+
+  async deleteObjectsByPrefix(prefix: string): Promise<number> {
+    if (!this.client) {
+      return 0;
+    }
+
+    let deleted = 0;
+    let continuationToken: string | undefined;
+
+    do {
+      const listing = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: prefix,
+          ContinuationToken: continuationToken,
+        }),
+      );
+
+      const keys =
+        listing.Contents?.map(item => item.Key).filter(
+          (key): key is string => Boolean(key),
+        ) ?? [];
+
+      if (keys.length > 0) {
+        await this.client.send(
+          new DeleteObjectsCommand({
+            Bucket: this.bucket,
+            Delete: {
+              Objects: keys.map(Key => ({ Key })),
+              Quiet: true,
+            },
+          }),
+        );
+
+        deleted += keys.length;
+      }
+
+      continuationToken = listing.IsTruncated
+        ? listing.NextContinuationToken
+        : undefined;
+    } while (continuationToken);
+
+    return deleted;
   }
 
   private assertEnabled(): void {

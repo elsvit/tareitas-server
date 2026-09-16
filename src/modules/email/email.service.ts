@@ -91,6 +91,34 @@ export class EmailService {
     return this.fromEmail.includes('@resend.dev');
   }
 
+  async sendAccountDeletionCode(
+    email: string,
+    code: string,
+  ): Promise<void> {
+    if (!this.resend) {
+      this.logDevFallback(
+        email,
+        code,
+        'RESEND_API_KEY not set (account deletion)',
+      );
+      return;
+    }
+
+    const { error } = await this.resend.emails.send({
+      from: this.fromEmail,
+      to: email,
+      subject: 'Your Tareitas account deletion verification code',
+      text: `Your Tareitas account deletion verification code is ${code}.\n\nThis code expires in 15 minutes. If you did not request this, you can ignore this email.`,
+    });
+
+    if (error) {
+      this.logger.error(
+        `Failed to send account deletion email to ${email}: ${error.message}`,
+      );
+      this.logDevFallback(email, code, error.message);
+    }
+  }
+
   private logDevFallback(
     email: string,
     code: string,

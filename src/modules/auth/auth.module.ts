@@ -1,17 +1,20 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { StringValue } from 'ms';
 
 import { AuthController } from './auth.controller';
+import { AccountDeletionService } from './account-deletion.service';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { EmailModule } from '../email/email.module';
+import { UploadsModule } from '../uploads/uploads.module';
 
 @Module({
   imports: [
     ConfigModule,
     EmailModule,
+    forwardRef(() => UploadsModule),
 
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -32,6 +35,7 @@ import { EmailModule } from '../email/email.module';
 
   providers: [
     AuthService,
+    AccountDeletionService,
     JwtAuthGuard,
   ],
 

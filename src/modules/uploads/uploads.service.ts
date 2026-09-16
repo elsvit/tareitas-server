@@ -2,7 +2,7 @@ import {
   HttpStatus,
   Injectable,
 } from '@nestjs/common';
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, rm, unlink, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
@@ -435,6 +435,35 @@ export class UploadsService {
       },
       update: {},
     });
+  }
+
+  async purgeFamilyStorage(familyId: string) {
+    const images = await this.prisma.familyImage.findMany({
+      where: { familyId },
+      select: { path: true },
+    });
+
+    for (const image of images) {
+      await this.deleteStoredFile(familyId, image.path).catch(
+        () => undefined,
+      );
+    }
+
+    const familyUploadsDir = join(this.uploadsRoot, familyId);
+
+    await rm(familyUploadsDir, {
+      recursive: true,
+      force: true,
+    }).catch(() => undefined);
+
+    if (this.objectStorage.isEnabled()) {
+      await this.objectStorage
+        .deleteObjectsByPrefix(`photos/${familyId}/`)
+        .catch(() => 0);
+      await this.objectStorage
+        .deleteObjectsByPrefix(`voice/${familyId}/`)
+        .catch(() => 0);
+    }
   }
 
   async deleteMediaFileIfExists(
