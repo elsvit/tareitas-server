@@ -239,6 +239,17 @@ export class RewardsService {
       );
     }
 
+    const existingPending =
+      await this.rewardsRepository.findPendingRedemption(
+        familyId,
+        reward.id,
+        childUserId,
+      );
+
+    if (existingPending) {
+      return toRewardRedemption(existingPending);
+    }
+
     const redemption =
       await this.rewardsRepository.createRedemption(
         {
@@ -338,6 +349,45 @@ export class RewardsService {
 
       throw error;
     }
+  }
+
+  async cancelRedemption(
+    familyId: string,
+    redemptionId: string,
+    userId: string,
+    userRole: ERole,
+  ) {
+    const redemption =
+      await this.getRedemptionEntity(
+        familyId,
+        redemptionId,
+      );
+
+    if (
+      redemption.status !==
+      ERewardRedemptionStatus.pending
+    ) {
+      throw new AppException(
+        ErrorCode.REWARD_REDEMPTION_INVALID_STATUS,
+        'Only pending redemptions can be cancelled',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    if (
+      userRole !== ERole.child ||
+      redemption.childUserId !== userId
+    ) {
+      throw new AppException(
+        ErrorCode.REWARD_NOT_ALLOWED,
+        'Only the child who selected this reward can cancel it',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    await this.rewardsRepository.deleteRedemption(
+      redemption.id,
+    );
   }
 
   async rejectRedemption(

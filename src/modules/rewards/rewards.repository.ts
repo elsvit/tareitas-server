@@ -132,6 +132,30 @@ export class RewardsRepository {
     });
   }
 
+  findPendingRedemption(
+    familyId: string,
+    rewardId: string,
+    childUserId: string,
+  ) {
+    return this.prisma.rewardRedemption.findFirst({
+      where: {
+        familyId,
+        rewardId,
+        childUserId,
+        status: ERewardRedemptionStatus.pending,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  deleteRedemption(redemptionId: string) {
+    return this.prisma.rewardRedemption.delete({
+      where: { id: redemptionId },
+    });
+  }
+
   createRedemption(data: {
     familyId: string;
     rewardId: string;

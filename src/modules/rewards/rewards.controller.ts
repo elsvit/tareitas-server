@@ -88,6 +88,27 @@ export class RewardsController {
   }
 
   /**
+   * POST /families/:familyId/rewards/redemptions/:redemptionId/cancel
+   */
+  @Post('redemptions/:redemptionId/cancel')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  cancelRedemption(
+    @CurrentUser() user: JwtPayload,
+    @CurrentFamilyMember()
+    member: FamilyMember,
+    @Param('familyId') familyId: string,
+    @Param('redemptionId')
+    redemptionId: string,
+  ) {
+    return this.rewardsService.cancelRedemption(
+      familyId,
+      redemptionId,
+      user.sub,
+      member.role as ERole,
+    );
+  }
+
+  /**
    * POST /families/:familyId/rewards/redemptions/:redemptionId/approve
    */
   @Post('redemptions/:redemptionId/approve')

@@ -87,11 +87,29 @@ export class TasksService {
       );
 
     if (existing) {
-      throw new AppException(
-        ErrorCode.TASK_ALREADY_EXISTS,
-        'Task already exists for this assignment and date',
-        HttpStatus.CONFLICT,
-      );
+      if (existing.status === ETaskStatus.approved) {
+        throw new AppException(
+          ErrorCode.TASK_NOT_ALLOWED,
+          'Approved tasks cannot be updated',
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
+      const updated =
+        await this.tasksRepository.update(
+          existing.id,
+          {
+            status: dto.status,
+            completedSubtasks:
+              dto.completedSubtasks,
+            completedAudioRecords:
+              dto.completedAudioRecords,
+            completedPhotos:
+              dto.completedPhotos,
+          },
+        );
+
+      return toTask(updated);
     }
 
     try {
@@ -117,11 +135,39 @@ export class TasksService {
           Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new AppException(
-          ErrorCode.TASK_ALREADY_EXISTS,
-          'Task already exists',
-          HttpStatus.CONFLICT,
-        );
+        const conflict =
+          await this.tasksRepository.findByAssignmentAndDate(
+            dto.assignmentId,
+            date,
+          );
+
+        if (!conflict) {
+          throw error;
+        }
+
+        if (conflict.status === ETaskStatus.approved) {
+          throw new AppException(
+            ErrorCode.TASK_NOT_ALLOWED,
+            'Approved tasks cannot be updated',
+            HttpStatus.FORBIDDEN,
+          );
+        }
+
+        const updated =
+          await this.tasksRepository.update(
+            conflict.id,
+            {
+              status: dto.status,
+              completedSubtasks:
+                dto.completedSubtasks,
+              completedAudioRecords:
+                dto.completedAudioRecords,
+              completedPhotos:
+                dto.completedPhotos,
+            },
+          );
+
+        return toTask(updated);
       }
 
       throw error;
