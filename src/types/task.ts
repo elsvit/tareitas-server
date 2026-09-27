@@ -59,6 +59,7 @@ export interface ITaskAssignment {
   newTaskBonus?: number;
   newTaskDuration?: number;
   subtasks?: ISubtask[];
+  localNotificationBeforeMinutes?: number;
   changes?: Record<string, ITaskAssignmentChange>;
   createdByUserId: string;
   createdAt: string;

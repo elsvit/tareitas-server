@@ -12,6 +12,7 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
@@ -141,6 +142,12 @@ export class CreateTaskAssignmentDto {
   subtasks?: SubtaskDto[];
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  localNotificationBeforeMinutes?: number;
+
+  @IsOptional()
   changes?: Record<
     string,
     TaskAssignmentChangeDto
@@ -214,6 +221,15 @@ export class UpdateTaskAssignmentDto {
   @ValidateNested({ each: true })
   @Type(() => SubtaskDto)
   subtasks?: SubtaskDto[];
+
+  @IsOptional()
+  @ValidateIf(
+    (_object, value) => value !== null && value !== undefined,
+  )
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  localNotificationBeforeMinutes?: number | null;
 
   @IsOptional()
   changes?: Record<

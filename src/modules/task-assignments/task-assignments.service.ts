@@ -85,6 +85,8 @@ export class TaskAssignmentsService {
             subtasks: dto.subtasks as unknown as
               | Prisma.InputJsonValue
               | undefined,
+            localNotificationBeforeMinutes:
+              dto.localNotificationBeforeMinutes,
             changes: dto.changes as unknown as
               | Prisma.InputJsonValue
               | undefined,
@@ -196,6 +198,11 @@ export class TaskAssignmentsService {
     if (dto.subtasks !== undefined) {
       updateData.subtasks =
         dto.subtasks as unknown as Prisma.InputJsonValue;
+    }
+
+    if (dto.localNotificationBeforeMinutes !== undefined) {
+      updateData.localNotificationBeforeMinutes =
+        dto.localNotificationBeforeMinutes;
     }
 
     if (dto.changes !== undefined) {

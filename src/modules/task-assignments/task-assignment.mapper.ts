@@ -73,6 +73,9 @@ export function toTaskAssignment(
     subtasks: parseJsonArray<ISubtask>(
       assignment.subtasks,
     ),
+    localNotificationBeforeMinutes:
+      assignment.localNotificationBeforeMinutes ??
+      undefined,
     changes: parseJsonRecord<ITaskAssignmentChange>(
       assignment.changes,
     ),

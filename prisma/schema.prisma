@@ -225,6 +225,8 @@ model TaskAssignment {
   subtasks Json?
   changes  Json     @default("{}")
 
+  localNotificationBeforeMinutes Int? @map("local_notification_before_minutes")
+
   createdByUserId String @map("created_by_user_id") @db.Uuid
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
