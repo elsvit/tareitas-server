@@ -68,6 +68,7 @@ export class TaskAssignmentsRepository {
     newTaskBonus?: number;
     newTaskDuration?: number;
     subtasks?: Prisma.InputJsonValue;
+    localNotificationBeforeMinutes?: number | null;
     changes?: Prisma.InputJsonValue;
     createdByUserId: string;
   }) {
@@ -89,6 +90,8 @@ export class TaskAssignmentsRepository {
         newTaskBonus: data.newTaskBonus,
         newTaskDuration: data.newTaskDuration,
         subtasks: data.subtasks,
+        localNotificationBeforeMinutes:
+          data.localNotificationBeforeMinutes,
         changes: data.changes ?? {},
         createdByUserId: data.createdByUserId,
       },
