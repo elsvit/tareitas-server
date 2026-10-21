@@ -35,8 +35,6 @@ async function bootstrap() {
   const productionOrigins = [
     'https://tareitas.net',
     'https://www.tareitas.net',
-    'https://tareitas.com',
-    'https://www.tareitas.com',
   ];
 
   const isAllowedOrigin = (origin: string | undefined): boolean => {
@@ -81,10 +79,11 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(3000);
+  const port = 3000;
+  await app.listen(port, '0.0.0.0');
 
   console.log(
-    'Tareitas API running on http://localhost:3000',
+    `Tareitas API running on http://localhost:${port} (LAN: use your Mac IP, e.g. http://192.168.x.x:${port}/api/health)`,
   );
 }
 

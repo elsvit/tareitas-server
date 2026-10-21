@@ -227,11 +227,13 @@ export class RewardsService {
       );
     }
 
-    if (
-      member.user.childProfile.reward.lessThan(
-        reward.cost,
-      )
-    ) {
+    const spendableBalance =
+      await this.getSpendableBalanceForChild(
+        familyId,
+        childUserId,
+      );
+
+    if (spendableBalance < reward.cost.toNumber()) {
       throw new AppException(
         ErrorCode.REWARD_INSUFFICIENT_BALANCE,
         'Insufficient reward balance',
@@ -299,6 +301,11 @@ export class RewardsService {
         HttpStatus.CONFLICT,
       );
     }
+
+    await this.reconcileChildProfileReward(
+      familyId,
+      redemption.childUserId,
+    );
 
     try {
       const updated =
@@ -489,11 +496,64 @@ export class RewardsService {
       );
     }
 
+    const walletBalance =
+      await this.reconcileChildProfileReward(
+        familyId,
+        childUserId,
+      );
+
     return {
       childUserId,
-      balance:
-        member.user.childProfile.reward.toNumber(),
+      balance: walletBalance,
     };
+  }
+
+  /**
+   * Wallet = approved task stars − approved redemption costs (synced to child_profiles.reward).
+   * Spendable = wallet − pending redemption costs.
+   */
+  private async reconcileChildProfileReward(
+    familyId: string,
+    childUserId: string,
+  ): Promise<number> {
+    const earned =
+      await this.rewardsRepository.computeApprovedTaskRewardTotal(
+        familyId,
+        childUserId,
+      );
+    const spentApproved =
+      await this.rewardsRepository.sumRedemptionCosts(
+        familyId,
+        childUserId,
+        [ERewardRedemptionStatus.approved],
+      );
+    const walletBalance = Math.max(0, earned - spentApproved);
+
+    await this.rewardsRepository.setChildProfileReward(
+      childUserId,
+      walletBalance,
+    );
+
+    return walletBalance;
+  }
+
+  private async getSpendableBalanceForChild(
+    familyId: string,
+    childUserId: string,
+  ): Promise<number> {
+    const walletBalance =
+      await this.reconcileChildProfileReward(
+        familyId,
+        childUserId,
+      );
+    const pendingReserved =
+      await this.rewardsRepository.sumRedemptionCosts(
+        familyId,
+        childUserId,
+        [ERewardRedemptionStatus.pending],
+      );
+
+    return Math.max(0, walletBalance - pendingReserved);
   }
 
   private async validateChildUserIds(

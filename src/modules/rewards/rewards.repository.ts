@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../db/prisma.service';
+import { getEffectiveReward } from '../task-assignments/task-assignment.mapper';
+import { formatTaskDate } from '../tasks/task.mapper';
 import { ERewardRedemptionStatus } from '../../types/reward';
+import { ETaskStatus } from '../../types/task';
 import { ERole } from '../../types/user';
 
 @Injectable()
@@ -255,6 +258,63 @@ export class RewardsRepository {
     return this.prisma.childProfile.findUnique({
       where: { userId: childUserId },
       select: { reward: true },
+    });
+  }
+
+  async computeApprovedTaskRewardTotal(
+    familyId: string,
+    childUserId: string,
+  ): Promise<number> {
+    const tasks = await this.prisma.task.findMany({
+      where: {
+        familyId,
+        status: ETaskStatus.approved,
+        assignment: {
+          childId: childUserId,
+        },
+      },
+      include: {
+        assignment: true,
+      },
+    });
+
+    return tasks.reduce((total, task) => {
+      return (
+        total +
+        getEffectiveReward(
+          task.assignment,
+          formatTaskDate(task.date),
+        )
+      );
+    }, 0);
+  }
+
+  sumRedemptionCosts(
+    familyId: string,
+    childUserId: string,
+    statuses: ERewardRedemptionStatus[],
+  ) {
+    return this.prisma.rewardRedemption
+      .aggregate({
+        where: {
+          familyId,
+          childUserId,
+          status: { in: statuses },
+        },
+        _sum: { cost: true },
+      })
+      .then(
+        result => result._sum.cost?.toNumber() ?? 0,
+      );
+  }
+
+  setChildProfileReward(
+    childUserId: string,
+    reward: number,
+  ) {
+    return this.prisma.childProfile.update({
+      where: { userId: childUserId },
+      data: { reward },
     });
   }
 }
